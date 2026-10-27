@@ -13,7 +13,7 @@
  */
 window.TOPO_DATA = {
 
-  pet: { soort: "beerdiertje", standaardNaam: "Beertje" },
+  pet: { soort: "pinguin", standaardNaam: "Pingu" },
 
   regios: {
     "zuid-holland": "Zuid-Holland",
@@ -81,6 +81,21 @@ window.TOPO_DATA = {
     { id: "biesbosch",          naam: "Biesbosch",          categorie: "gebied", regio: "gebied", label: "F", weetje: "Natuurgebied met rivieren en wilgen 🦫" },
     { id: "zeeuws-vlaanderen",  naam: "Zeeuws-Vlaanderen",  categorie: "gebied", regio: "gebied", label: "G", weetje: "Het stukje Zeeland onder de Westerschelde 🌾" }
   ],
+
+  // Genormaliseerde posities (0..1) van de STAD-nummers op Kaart_0001, zodat de
+  // app het gevraagde nummer kan omcirkelen. Afgelezen van de kaart en visueel
+  // geverifieerd via een overlay. Alleen steden (wateren/gebieden = geen punt).
+  coords: {
+    "haarlem": [0.58, 0.42], "den-haag": [0.42, 0.53], "utrecht": [0.755, 0.53],
+    "den-burg": [0.62, 0.065], "den-helder": [0.63, 0.115], "alkmaar": [0.60, 0.245],
+    "hoorn": [0.765, 0.25], "volendam": [0.765, 0.29], "amsterdam": [0.71, 0.42],
+    "amstelveen": [0.60, 0.44], "noordwijk": [0.53, 0.465], "leiden": [0.545, 0.49],
+    "hilversum": [0.795, 0.48], "amersfoort": [0.905, 0.50], "hoek-van-holland": [0.405, 0.57],
+    "gouda": [0.605, 0.56], "zeist": [0.805, 0.55], "schiedam": [0.525, 0.57],
+    "rotterdam": [0.58, 0.57], "nieuwegein": [0.715, 0.575], "renesse": [0.225, 0.675],
+    "zierikzee": [0.28, 0.725], "goes": [0.28, 0.80], "middelburg": [0.19, 0.785],
+    "vlissingen": [0.13, 0.815], "terneuzen": [0.235, 0.90]
+  },
 
   // Winkel: eten vult honger+blijheid, kleren kun je dragen, deco siert het huis
   shop: [

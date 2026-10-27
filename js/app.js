@@ -65,6 +65,12 @@
   }
   function hasLabel(item) { return labelOf(item).trim() !== ""; }
   function prog(id) { return state.progress[id]; }
+  function coordOf(item) { return (DATA.coords && DATA.coords[item.id]) || null; }
+  function mapHTML(item, showMarker) {
+    var c = showMarker ? coordOf(item) : null;
+    var marker = c ? '<div class="maphi" style="left:' + (c[0] * 100) + "%;top:" + (c[1] * 100) + '%"></div>' : "";
+    return '<div class="bigmap" id="qmap"><img src="assets/kaart.jpg" alt="kaart van West-Nederland">' + marker + "</div>";
+  }
   function isMastered(id) { var p = prog(id); return !!p && p.box >= MASTER_BOX; }
   function masteredCount() {
     return DATA.items.filter(function (it) { return isMastered(it.id); }).length;
@@ -214,39 +220,37 @@
     var st = stage().id;
     var scale = st === "baby" ? 0.82 : st === "kind" ? 1 : st === "groot" ? 1.15 : 1.3;
     var blij = state.needs.blij;
-    var mouth = blij >= 60
-      ? "M78 104 Q100 124 122 104"          // blij
-      : blij >= 35
-        ? "M80 110 H120"                      // neutraal
-        : "M78 114 Q100 100 122 114";        // slaperig
-    var eyeOpen = blij >= 35;
-    var body = "#c6d18a", edge = "#9aa86a", belly = "#dde7b4";
-    var legs = "";
-    for (var i = 0; i < 4; i++) {
-      var lx = 55 + i * 22;
-      legs += '<ellipse cx="' + lx + '" cy="140" rx="9" ry="13" fill="' + body + '" stroke="' + edge + '" stroke-width="2"/>';
-    }
-    var eyes = eyeOpen
-      ? '<circle cx="86" cy="86" r="8" fill="#fff"/><circle cx="114" cy="86" r="8" fill="#fff"/>' +
-        '<circle cx="88" cy="88" r="4" fill="#333"/><circle cx="116" cy="88" r="4" fill="#333"/>'
-      : '<path d="M80 88 Q86 82 92 88" stroke="#333" stroke-width="3" fill="none"/>' +
-        '<path d="M108 88 Q114 82 120 88" stroke="#333" stroke-width="3" fill="none"/>';
-    var crown = st === "meester" ? '<text x="100" y="34" font-size="30" text-anchor="middle">👑</text>' : "";
+    var sleepy = blij < 35;
+    var dark = "#313c59", darker = "#28314a", belly = "#fdfdfd", beak = "#ffb23e", feet = "#ff9e2c";
+    var eyes = sleepy
+      ? '<path d="M78 70 q8 7 16 0" stroke="#222" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+        '<path d="M106 70 q8 7 16 0" stroke="#222" stroke-width="3" fill="none" stroke-linecap="round"/>'
+      : '<ellipse cx="86" cy="70" rx="9" ry="11" fill="#fff"/><ellipse cx="114" cy="70" rx="9" ry="11" fill="#fff"/>' +
+        '<circle cx="88" cy="72" r="4.5" fill="#222"/><circle cx="116" cy="72" r="4.5" fill="#222"/>' +
+        '<circle cx="89.5" cy="70" r="1.4" fill="#fff"/><circle cx="117.5" cy="70" r="1.4" fill="#fff"/>';
+    var cheeks = blij >= 60
+      ? '<circle cx="73" cy="86" r="6" fill="#ff9ab0" opacity=".55"/><circle cx="127" cy="86" r="6" fill="#ff9ab0" opacity=".55"/>'
+      : "";
+    var zzz = sleepy ? '<text x="150" y="52" font-size="18" fill="#7a86b5">z</text><text x="163" y="40" font-size="13" fill="#9aa5cf">z</text>' : "";
+    var crown = st === "meester" ? '<text x="100" y="24" font-size="28" text-anchor="middle">👑</text>' : "";
     var hat = "";
     if (state.equipped) {
       var it = DATA.shop.filter(function (s) { return s.id === state.equipped; })[0];
-      if (it) hat = '<text x="100" y="40" font-size="34" text-anchor="middle">' + it.emoji + "</text>";
+      if (it) hat = '<text x="100" y="30" font-size="32" text-anchor="middle">' + it.emoji + "</text>";
     }
-    var sparkle = st === "meester" ? '<text x="28" y="60" font-size="22">✨</text><text x="156" y="70" font-size="22">✨</text>' : "";
-    return '<svg viewBox="0 0 200 170" class="pet-svg" style="transform:scale(' + scale + ')">' +
-      sparkle + legs +
-      '<ellipse cx="100" cy="100" rx="62" ry="46" fill="' + body + '" stroke="' + edge + '" stroke-width="3"/>' +
-      '<ellipse cx="100" cy="110" rx="40" ry="26" fill="' + belly + '"/>' +
-      '<path d="M55 78 Q100 70 145 78" stroke="' + edge + '" stroke-width="2" fill="none" opacity=".5"/>' +
-      '<path d="M52 100 Q100 94 148 100" stroke="' + edge + '" stroke-width="2" fill="none" opacity=".5"/>' +
-      eyes +
-      '<path d="' + mouth + '" stroke="#7a5" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-      crown + hat +
+    var sparkle = st === "meester" ? '<text x="26" y="72" font-size="20">✨</text><text x="160" y="82" font-size="20">✨</text>' : "";
+    return '<svg viewBox="0 0 200 175" class="pet-svg" style="transform:scale(' + scale + ')">' +
+      sparkle +
+      '<ellipse cx="84" cy="159" rx="15" ry="8" fill="' + feet + '"/>' +
+      '<ellipse cx="116" cy="159" rx="15" ry="8" fill="' + feet + '"/>' +
+      '<ellipse cx="51" cy="104" rx="13" ry="33" fill="' + darker + '" transform="rotate(13 51 104)"/>' +
+      '<ellipse cx="149" cy="104" rx="13" ry="33" fill="' + darker + '" transform="rotate(-13 149 104)"/>' +
+      '<ellipse cx="100" cy="92" rx="53" ry="64" fill="' + dark + '"/>' +
+      '<ellipse cx="100" cy="106" rx="35" ry="46" fill="' + belly + '"/>' +
+      cheeks + eyes +
+      '<path d="M100 80 L113 90 L100 99 L87 90 Z" fill="' + beak + '"/>' +
+      '<path d="M100 90 L113 90 L100 99 Z" fill="#e8892a"/>' +
+      zzz + crown + hat +
       "</svg>";
   }
 
@@ -275,13 +279,17 @@
   }
 
   // ---------------------------------------------------------------- Scherm: Home
+  var homeMsg = null;
   function renderHome() {
     tickNeeds(); save();
     var st = stage();
     var m = masteredCount(), totaal = DATA.items.filter(hasLabel).length;
-    var greet = state.needs.honger < 40 ? "Ik heb een beetje honger… zullen we muntjes verdienen? 🍪"
+    var greet = homeMsg ? homeMsg
+      : state.needs.energie < 35 ? "Ik ben een beetje moe… zullen we even slapen? 😴"
+      : state.needs.honger < 40 ? "Ik heb een beetje honger… zullen we muntjes verdienen? 🍪"
       : state.needs.blij < 40 ? "Ik verveel me een beetje. Spelen? 🎲"
         : "Hoi! Zullen we samen de kaart oefenen? 🗺️";
+    homeMsg = null;
 
     var nameBlock = state.pet.nameSet ? "" :
       '<div class="namebox"><input id="petname" placeholder="Naam voor je beertje" maxlength="14" value="' +
@@ -299,6 +307,7 @@
       '<button class="btn shop" data-nav="winkel">🛍️ Winkel</button>' +
       '<button class="btn album" data-nav="album">📒 Album</button>' +
       "</div>" +
+      '<button class="btn rest" data-act="slapen">😴 Even slapen (meer energie)</button>' +
       '<button class="btn ghost" data-nav="ouders">⚙️ Voor ouders</button>' +
       "</div>");
 
@@ -368,7 +377,7 @@
       '<div class="screen quiz">' +
       '<div class="progress-line">Vraag ' + (sIndex + 1) + " van " + session.length +
       (sStreak >= 2 ? ' · 🔥 ' + sStreak + " op rij!" : "") + "</div>" +
-      '<div class="bigmap"><img src="assets/kaart.jpg" alt="kaart van West-Nederland"></div>' +
+      mapHTML(q.item, q.mode === "tekenNaarNaam") +
       '<div class="question">' + esc(q.vraag) + "</div>" +
       '<div class="choices">' + opts + "</div>" +
       '<div class="feedback" id="fb"></div>' +
@@ -386,6 +395,11 @@
       b.disabled = true;
       if (q.opties[+b.getAttribute("data-i")] === q.antwoord) b.classList.add("good");
     });
+    // onthul de plek op de kaart (ook als 'ie niet vooraf getoond werd)
+    var mp = el("qmap"), c = coordOf(q.item);
+    if (mp && c && !mp.querySelector(".maphi")) {
+      mp.insertAdjacentHTML("beforeend", '<div class="maphi" style="left:' + (c[0] * 100) + "%;top:" + (c[1] * 100) + '%"></div>');
+    }
     var p = prog(q.item.id);
     if (correct) {
       sStreak++; sCorrect++;
@@ -513,6 +527,7 @@
     if (it.type === "eten") {
       state.needs.honger = clamp(state.needs.honger + 20);
       state.needs.blij = clamp(state.needs.blij + 8);
+      state.needs.energie = clamp(state.needs.energie + 10);
     } else {
       if (state.owned.indexOf(id) < 0) state.owned.push(id);
       if (it.type === "kleren") state.equipped = id;
@@ -568,6 +583,8 @@
       '<div class="screen ouders">' +
       '<p class="info">Voortgang: <b>' + m + " / " + totaal + "</b> begrippen gekend. " +
       "Reeks: " + (state.streakDays || 0) + " dag(en).</p>" +
+      '<div class="namebox"><input id="rename" maxlength="14" value="' + esc(state.pet.naam) + '">' +
+      '<button class="btn mini" id="dorename">Naam opslaan</button></div>' +
       '<div class="row">' +
       '<button class="btn mini" data-nav="kaart">🗺️ Kaart instellen</button>' +
       '<button class="btn mini danger" id="reset">↺ Opnieuw beginnen</button>' +
@@ -578,6 +595,10 @@
       if (confirm("Weet je het zeker? Alle voortgang en muntjes worden gewist.")) {
         state = defaultState(); save(); renderHome();
       }
+    });
+    on("dorename", "click", function () {
+      var v = el("rename").value.trim();
+      if (v) { state.pet.naam = v; state.pet.nameSet = true; save(); AudioFX.play("pop"); renderOuders(); }
     });
   }
 
@@ -681,6 +702,17 @@
   var currentRoute = "home";
   function nav(route) { currentRoute = ROUTES[route] ? route : "home"; (ROUTES[currentRoute])(); window.scrollTo(0, 0); }
 
+  function doAction(act) {
+    if (act === "slapen") {
+      state.needs.energie = clamp(state.needs.energie + 45);
+      state.needs.blij = clamp(state.needs.blij + 4);
+      state.lastTick = Date.now();
+      save(); AudioFX.play("pop");
+      homeMsg = "Hamm… heerlijk geslapen! Ik heb weer energie ✨😴";
+      renderHome();
+    }
+  }
+
   function init() {
     appEl = document.getElementById("app");
     load(); initConfetti();
@@ -688,6 +720,8 @@
       AudioFX.ensure(); // audio ontgrendelen bij eerste klik
       var mt = e.target.closest("[data-mute]");
       if (mt) { state.muted = !state.muted; save(); mt.textContent = state.muted ? "🔇" : "🔊"; if (!state.muted) AudioFX.play("pop"); return; }
+      var ac = e.target.closest("[data-act]");
+      if (ac) { doAction(ac.getAttribute("data-act")); return; }
       var t = e.target.closest("[data-nav]");
       if (t) nav(t.getAttribute("data-nav"));
     });

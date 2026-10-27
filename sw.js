@@ -1,5 +1,5 @@
 /* Service worker — maakt de app offline speelbaar na de eerste keer. */
-var CACHE = "topo-huisdier-v2";
+var CACHE = "topo-huisdier-v4";
 var ASSETS = [
   "./",
   "./index.html",

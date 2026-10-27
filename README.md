@@ -1,7 +1,7 @@
 # Topo-huisdier (de app)
 
 Een kleine, gamified PWA waarmee je kind de topografie van **West-Nederland**
-oefent en tegelijk haar **beerdiertje** verzorgt. Zie het concept en het
+oefent en tegelijk haar **pinguïn** verzorgt. Zie het concept en het
 technische plan in [`../voorstellen/topo-huisdier/`](../voorstellen/topo-huisdier/).
 
 ## Spelen

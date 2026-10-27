@@ -54,14 +54,29 @@ body {
 .btn.play { background: linear-gradient(90deg, #46b358, #2e9e7a); }
 .btn.shop { background: linear-gradient(90deg, #ff9ec7, #b06ad6); }
 .btn.album { background: linear-gradient(90deg, #6bc9ff, #5a8ee0); }
+.btn.rest { background: linear-gradient(90deg, #7b86e0, #5a63c7); }
 .btn.ghost { background: #ece6f5; color: #6b5b85; box-shadow: 0 4px 0 rgba(0, 0, 0, .08); }
 .btn.mini { font-size: 15px; padding: 10px 12px; background: #b06ad6; }
 .btn.mini.danger { background: #e06666; }
 .row { display: flex; gap: 10px; } .row .btn { flex: 1; }
 
 /* Map */
-.bigmap { border-radius: 16px; overflow: hidden; border: 3px solid #e7d6f5; background: #dfeefc; }
+.bigmap { position: relative; border-radius: 16px; overflow: hidden; border: 3px solid #e7d6f5; background: #dfeefc; }
 .bigmap img { display: block; width: 100%; }
+/* highlight-markering van het gevraagde nummer */
+.maphi {
+  position: absolute; width: 11%; aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border: 3px solid #ff2e2e; border-radius: 50%;
+  background: rgba(255, 46, 46, .12);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .85);
+  animation: hipulse 1.1s ease-out infinite; pointer-events: none;
+}
+@keyframes hipulse {
+  0%   { box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 0 0 rgba(255,46,46,.55); }
+  70%  { box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 0 16px rgba(255,46,46,0); }
+  100% { box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 0 0 rgba(255,46,46,0); }
+}
 
 /* Quiz */
 .question { font-weight: bold; font-size: 20px; color: #9a3ab0; text-align: center; }
