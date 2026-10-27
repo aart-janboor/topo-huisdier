@@ -38,6 +38,7 @@
       badges: [],
       stickers: [],     // ids van gekende begrippen
       overrides: {},    // id -> {label}
+      pos: {},          // deco-id -> {x,y} (%): zelf verplaatste plek
       muted: false      // geluid aan/uit
     };
     for (var i = 0; i < s.unlockedCount && i < DATA.items.length; i++) {
@@ -52,7 +53,7 @@
   function load() {
     try {
       var raw = localStorage.getItem(SAVE_KEY);
-      if (raw) { state = JSON.parse(raw); return; }
+      if (raw) { state = JSON.parse(raw); if (!state.pos) state.pos = {}; return; }
     } catch (e) {}
     state = defaultState();
   }
@@ -332,6 +333,9 @@
   }
 
   // Tekent een scene (buiten/huis/tuin/boven) met de gekochte deco + de pinguïn.
+  var editMode = false;
+  function decoPos(s) { return (state.pos && state.pos[s.id]) || s; }
+
   function sceneHTML(scene, extraClass) {
     if (scene === "buiten") {
       return '<div class="scene buiten' + (extraClass ? " " + extraClass : "") + '">' + houseSVG() +
@@ -340,10 +344,24 @@
     var objs = DATA.shop.filter(function (s) {
       return s.type === "deco" && (s.scene || "huis") === scene && owns(s.id);
     }).map(function (s) {
-      return '<span class="deco-obj" style="left:' + s.x + "%;top:" + s.y + "%;font-size:" + (s.size || 36) + 'px">' + s.emoji + "</span>";
+      var q = decoPos(s);
+      return '<span class="deco-obj" data-deco="' + s.id + '" style="left:' + q.x + "%;top:" + q.y + "%;font-size:" + (s.size || 36) + 'px">' + s.emoji + "</span>";
     }).join("");
-    return '<div class="scene ' + scene + (extraClass ? " " + extraClass : "") + '">' + objs +
+    var editing = editMode && !extraClass;
+    return '<div class="scene ' + scene + (editing ? " editing" : "") + (extraClass ? " " + extraClass : "") + '">' + objs +
       '<div class="pet-wrap">' + petSVG() + "</div></div>";
+  }
+
+  function hasDecoIn(scene) {
+    return DATA.shop.some(function (s) { return s.type === "deco" && (s.scene || "huis") === scene && owns(s.id); });
+  }
+  function editBar(scene) {
+    if (scene === "buiten" || !hasDecoIn(scene)) return "";
+    return editMode
+      ? '<div class="editbar"><span>👆 Sleep de spullen naar een nieuwe plek</span>' +
+        '<button class="btn mini" data-edit="reset">↺ Terugzetten</button>' +
+        '<button class="btn mini ok" data-edit="off">✅ Klaar</button></div>'
+      : '<div class="editbar"><button class="btn mini" data-edit="on">✋ Inrichten</button></div>';
   }
 
   function sceneTabs() {
@@ -414,7 +432,7 @@
     h(topbar("Topo-huisdier") +
       '<div class="screen">' +
       sceneTabs() +
-      sceneHTML(state.currentScene) +
+      sceneHTML(state.currentScene) + editBar(state.currentScene) +
       '<div class="petinfo">' +
       '<div class="petname">' + esc(state.pet.naam) + ' — <span>' + st.naam + "</span></div>" +
       '<div class="speech">' + greet + "</div>" + nameBlock + "</div>" +
@@ -885,7 +903,7 @@
     album: renderAlbum, ouders: renderOuders, kaart: renderKaart
   };
   var currentRoute = "home";
-  function nav(route) { currentRoute = ROUTES[route] ? route : "home"; (ROUTES[currentRoute])(); window.scrollTo(0, 0); }
+  function nav(route) { editMode = false; currentRoute = ROUTES[route] ? route : "home"; (ROUTES[currentRoute])(); window.scrollTo(0, 0); }
 
   function doAction(act) {
     if (act === "slapen") {
@@ -913,12 +931,47 @@
       AudioFX.ensure(); // audio ontgrendelen bij eerste klik
       var mt = e.target.closest("[data-mute]");
       if (mt) { state.muted = !state.muted; save(); mt.textContent = state.muted ? "🔇" : "🔊"; if (!state.muted) AudioFX.play("pop"); return; }
+      var ed = e.target.closest("[data-edit]");
+      if (ed) {
+        var a = ed.getAttribute("data-edit");
+        if (a === "on") editMode = true;
+        else if (a === "off") editMode = false;
+        else if (a === "reset") {
+          DATA.shop.forEach(function (s) { if (s.type === "deco" && (s.scene || "huis") === state.currentScene) delete state.pos[s.id]; });
+        }
+        save(); AudioFX.play("pop"); renderHome(); return;
+      }
       var sc = e.target.closest("[data-scene]");
-      if (sc) { state.currentScene = sc.getAttribute("data-scene"); save(); AudioFX.play("pop"); renderHome(); return; }
+      if (sc) { editMode = false; state.currentScene = sc.getAttribute("data-scene"); save(); AudioFX.play("pop"); renderHome(); return; }
       var ac = e.target.closest("[data-act]");
       if (ac) { doAction(ac.getAttribute("data-act")); return; }
       var t = e.target.closest("[data-nav]");
       if (t) nav(t.getAttribute("data-nav"));
+    });
+    document.addEventListener("pointerdown", function (e) {
+      var o = e.target.closest && e.target.closest(".scene.editing .deco-obj");
+      if (!o) return;
+      e.preventDefault();
+      var scene = o.parentNode, id = o.getAttribute("data-deco");
+      try { o.setPointerCapture(e.pointerId); } catch (x) {}
+      o.classList.add("drag"); AudioFX.play("pop");
+      function move(ev) {
+        var r = scene.getBoundingClientRect();
+        var x = Math.max(4, Math.min(96, (ev.clientX - r.left) / r.width * 100));
+        var y = Math.max(6, Math.min(96, (ev.clientY - r.top) / r.height * 100));
+        o.style.left = x + "%"; o.style.top = y + "%";
+        o._p = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+      }
+      function up() {
+        o.removeEventListener("pointermove", move);
+        o.removeEventListener("pointerup", up);
+        o.removeEventListener("pointercancel", up);
+        o.classList.remove("drag");
+        if (o._p) { state.pos[id] = o._p; save(); AudioFX.play("pop"); }
+      }
+      o.addEventListener("pointermove", move);
+      o.addEventListener("pointerup", up);
+      o.addEventListener("pointercancel", up);
     });
     var scm = /[?&]scene=(buiten|huis|tuin|boven)/.exec(location.search);
     if (scm && sceneUnlocked(scm[1])) state.currentScene = scm[1];
