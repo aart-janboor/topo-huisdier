@@ -130,6 +130,46 @@ small { color: #999; font-size: 11px; }
 /* Confetti overlay */
 .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 50; }
 
+/* Scene: huis / tuin / boven (pinguïn in zijn kamer met deco) */
+.scenetabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.scenetab { font: inherit; font-weight: bold; border: 2px solid #e7d6f5; background: #faf5ff; border-radius: 14px; padding: 8px 12px; cursor: pointer; font-size: 14px; }
+.scenetab.on { background: #b06ad6; color: #fff; border-color: #b06ad6; }
+.scene { position: relative; height: 250px; border-radius: 20px; overflow: hidden; box-shadow: inset 0 0 0 3px rgba(255,255,255,.4); }
+.scene.huis  { background: linear-gradient(#f0e2d1 0%, #f0e2d1 62%, #c99c6d 62%, #b6895a 100%); }
+.scene.tuin  { background: linear-gradient(#bfe8ff 0%, #bfe8ff 52%, #8fd36b 52%, #67ba49 100%); }
+.scene.boven { background: linear-gradient(#2b2b55 0%, #3a3a6b 58%, #7c6b52 58%, #6a5a46 100%); }
+.scene .pet-wrap { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); }
+.scene .pet-svg { width: 170px; height: 150px; }
+.deco-obj { position: absolute; transform: translate(-50%, -50%); line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+.scene.shoppeek { height: 140px; margin-bottom: 6px; }
+.scene.shoppeek .pet-wrap { transform: translateX(-50%) scale(.62); transform-origin: bottom center; }
+.petinfo { text-align: center; }
+
+/* Winkel: vergrendelde items + te duur */
+.item.locked { opacity: .6; }
+.lockmsg { font-size: 12px; color: #a08; font-weight: bold; padding: 7px 2px; background: #f6edfa; border-radius: 10px; }
+.buy.poor { background: #ececec; color: #aaa; }
+.newbadges.unlock { color: #2e9e7a; }
+
+/* Nudge: zwevend tekstballonnetje */
+.nudge {
+  position: fixed; left: 50%; top: 66px; transform: translate(-50%, -12px);
+  background: #fff; color: #333; border: 3px solid #b06ad6; border-radius: 18px;
+  padding: 11px 18px 13px; font-weight: bold; text-align: center; max-width: 86%;
+  box-shadow: 0 8px 22px rgba(0,0,0,.22); z-index: 60; opacity: 0;
+  transition: opacity .3s, transform .3s; pointer-events: none;
+}
+.nudge.show { opacity: 1; transform: translate(-50%, 0); }
+.nudge::after { content: "🐧"; position: absolute; bottom: -16px; left: 18px; font-size: 22px; }
+
+/* Updatebalk onderaan */
+.updatebar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+  background: #2e9e7a; color: #fff; display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 12px; font-weight: bold; box-shadow: 0 -4px 14px rgba(0,0,0,.2);
+}
+.updatebar button { font: inherit; font-weight: bold; border: none; border-radius: 10px; padding: 8px 16px; background: #fff; color: #2e9e7a; cursor: pointer; }
+
 /* ---- Grotere / landscape tablets (bijv. 11") ---- */
 @media (orientation: landscape) and (min-width: 800px) {
   #app { max-width: 1000px; }

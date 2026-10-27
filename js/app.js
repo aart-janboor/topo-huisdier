@@ -21,14 +21,16 @@
   function defaultState() {
     var s = {
       version: 1,
-      pet: { soort: "beerdiertje", naam: DATA.pet.standaardNaam, nameSet: false },
-      coins: 30,
+      pet: { soort: "pinguin", naam: DATA.pet.standaardNaam, nameSet: false },
+      coins: 15,
       xp: 0,
       needs: { blij: 70, honger: 60, energie: 70 },
       lastTick: Date.now(),
-      owned: [],        // gekochte kleren/deco (ids)
+      owned: [],        // alles wat gekocht is (kleren, deco, upgrades) — ids
       equipped: null,   // gedragen kleren-id
-      deco: [],         // geplaatste deco-ids
+      deco: [],         // (legacy) niet meer gebruikt; scene leest uit owned
+      currentScene: "huis",
+      shopTier: 0,      // hoogste bereikte unlock-drempel (voor "nieuw in winkel")
       progress: {},     // id -> {box, goed, fout, dueAt, introduced}
       unlockedCount: 5,
       streakDays: 0,
@@ -46,6 +48,7 @@
   }
 
   var state;
+  var demoMode = false;
   function load() {
     try {
       var raw = localStorage.getItem(SAVE_KEY);
@@ -54,6 +57,7 @@
     state = defaultState();
   }
   function save() {
+    if (demoMode) return;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
   }
 
@@ -74,6 +78,22 @@
   function isMastered(id) { var p = prog(id); return !!p && p.box >= MASTER_BOX; }
   function masteredCount() {
     return DATA.items.filter(function (it) { return isMastered(it.id); }).length;
+  }
+  function owns(id) { return state.owned.indexOf(id) >= 0; }
+  function shopItem(id) { return DATA.shop.filter(function (s) { return s.id === id; })[0]; }
+  function isLocked(item) { return (item.minMastered || 0) > masteredCount(); }
+  function sceneUnlocked(scene) {
+    var cfg = DATA.scenes[scene];
+    return !cfg || !cfg.upgrade || owns(cfg.upgrade);
+  }
+  function unlockedScenes() {
+    return Object.keys(DATA.scenes).filter(sceneUnlocked);
+  }
+  // Volgende drempel waarop er iets nieuws in de winkel komt
+  function nextGate() {
+    var m = masteredCount();
+    for (var i = 0; i < DATA.gates.length; i++) if (DATA.gates[i] > m) return DATA.gates[i];
+    return null;
   }
 
   // Begrippen die meedoen in de quiz: ontgrendeld, geïntroduceerd en met een teken
@@ -278,6 +298,57 @@
       bar("Honger", "honger", "honger") + bar("Energie", "energie", "energie") + "</div>";
   }
 
+  // Tekent een scene (huis/tuin/boven) met de gekochte deco + de pinguïn.
+  function sceneHTML(scene, extraClass) {
+    var objs = DATA.shop.filter(function (s) {
+      return s.type === "deco" && (s.scene || "huis") === scene && owns(s.id);
+    }).map(function (s) {
+      return '<span class="deco-obj" style="left:' + s.x + "%;top:" + s.y + "%;font-size:" + (s.size || 36) + 'px">' + s.emoji + "</span>";
+    }).join("");
+    return '<div class="scene ' + scene + (extraClass ? " " + extraClass : "") + '">' + objs +
+      '<div class="pet-wrap">' + petSVG() + "</div></div>";
+  }
+
+  function sceneTabs() {
+    var scenes = unlockedScenes();
+    if (scenes.length < 2) return "";
+    return '<div class="scenetabs">' + scenes.map(function (sc) {
+      var cfg = DATA.scenes[sc];
+      return '<button class="scenetab ' + (state.currentScene === sc ? "on" : "") +
+        '" data-scene="' + sc + '">' + cfg.emoji + " " + cfg.naam + "</button>";
+    }).join("") + "</div>";
+  }
+
+  function randomMotivatie() {
+    var m = DATA.motivaties;
+    return m[Math.floor(Math.random() * m.length)];
+  }
+
+  // Zwevend tekstballonnetje als aanmoediging (nudge).
+  function showNudge(text) {
+    var old = el("nudge"); if (old) old.parentNode.removeChild(old);
+    var n = document.createElement("div");
+    n.id = "nudge"; n.className = "nudge"; n.textContent = text;
+    document.body.appendChild(n);
+    AudioFX.play("nudge");
+    setTimeout(function () { n.classList.add("show"); }, 20);
+    setTimeout(function () { n.classList.remove("show"); }, 3200);
+    setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 3700);
+  }
+
+  // Balkje "nieuwe versie beschikbaar" (zie service worker).
+  function showUpdateBanner(reg) {
+    if (document.getElementById("updatebar")) return;
+    var bar = document.createElement("div");
+    bar.id = "updatebar"; bar.className = "updatebar";
+    bar.innerHTML = '<span>🔄 Er is een nieuwe versie!</span><button id="doupdate">Nu updaten</button>';
+    document.body.appendChild(bar);
+    document.getElementById("doupdate").addEventListener("click", function () {
+      this.textContent = "Bezig…";
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+    });
+  }
+
   // ---------------------------------------------------------------- Scherm: Home
   var homeMsg = null;
   function renderHome() {
@@ -288,20 +359,30 @@
       : state.needs.energie < 35 ? "Ik ben een beetje moe… zullen we even slapen? 😴"
       : state.needs.honger < 40 ? "Ik heb een beetje honger… zullen we muntjes verdienen? 🍪"
       : state.needs.blij < 40 ? "Ik verveel me een beetje. Spelen? 🎲"
+      : Math.random() < 0.6 ? randomMotivatie()
         : "Hoi! Zullen we samen de kaart oefenen? 🗺️";
     homeMsg = null;
 
+    if (!sceneUnlocked(state.currentScene)) state.currentScene = "huis";
+
     var nameBlock = state.pet.nameSet ? "" :
-      '<div class="namebox"><input id="petname" placeholder="Naam voor je beertje" maxlength="14" value="' +
-      state.pet.naam + '"><button class="btn mini" id="savename">Opslaan</button></div>';
+      '<div class="namebox"><input id="petname" placeholder="Naam voor je pinguïn" maxlength="14" value="' +
+      esc(state.pet.naam) + '"><button class="btn mini" id="savename">Opslaan</button></div>';
+
+    var ng = nextGate();
+    var unlockLine = ng != null
+      ? '<div class="progress-line">🎓 ' + m + " / " + totaal + " gekend · nog " + (ng - m) + " tot nieuwe winkelspullen 🛍️</div>"
+      : '<div class="progress-line">🎓 ' + m + " / " + totaal + " gekend · alles ontgrendeld! 🏆</div>";
 
     h(topbar("Topo-huisdier") +
       '<div class="screen">' +
-      '<div class="petyard">' + petSVG() +
+      sceneTabs() +
+      sceneHTML(state.currentScene) +
+      '<div class="petinfo">' +
       '<div class="petname">' + esc(state.pet.naam) + ' — <span>' + st.naam + "</span></div>" +
       '<div class="speech">' + greet + "</div>" + nameBlock + "</div>" +
       needsBars() +
-      '<div class="progress-line">🎓 ' + m + " / " + totaal + " gekend</div>" +
+      unlockLine +
       '<button class="btn play" data-nav="oefenen">▶ Ga oefenen</button>' +
       '<div class="row">' +
       '<button class="btn shop" data-nav="winkel">🛍️ Winkel</button>' +
@@ -403,14 +484,15 @@
     var p = prog(q.item.id);
     if (correct) {
       sStreak++; sCorrect++;
-      var bonus = sStreak >= 2 ? Math.min(10, (sStreak - 1) * 2) : 0;
-      var gain = 10 + bonus;
+      var bonus = sStreak >= 2 ? Math.min(6, (sStreak - 1) * 2) : 0;
+      var gain = 8 + bonus;
       sEarned += gain; state.coins += gain; state.xp += 5;
       state.needs.blij = clamp(state.needs.blij + 3);
       schedule(p, true);
       el("fb").innerHTML = '<span class="ok">🎉 Goed! +' + gain + " 💰" + (bonus ? " (reeks-bonus!)" : "") + "</span>";
       AudioFX.play("goed"); setTimeout(function () { AudioFX.play("munt"); }, 140);
       confetti();
+      if (sStreak === 3 || sStreak === 6) showNudge(randomMotivatie());
     } else {
       btn.classList.add("bad"); sStreak = 0;
       schedule(p, false);
@@ -440,6 +522,8 @@
     save();
 
     var newBadges = state._justBadges || []; state._justBadges = [];
+    var newUnlocks = state._justUnlocks || []; state._justUnlocks = [];
+    save();
     h(topbar("Goed gedaan!") +
       '<div class="screen">' +
       '<div class="petyard">' + petSVG() +
@@ -448,11 +532,14 @@
       "</b> goed en verdiende <b>" + sEarned + " 💰</b>.</div></div>" +
       (state.streakDays > 1 ? '<div class="progress-line">🔥 ' + state.streakDays + " dagen op rij geoefend!</div>" : "") +
       (newBadges.length ? '<div class="newbadges">Nieuwe beloning: ' + newBadges.map(esc).join(", ") + " 🏅</div>" : "") +
+      (newUnlocks.length ? '<div class="newbadges unlock">' + newUnlocks.map(esc).join("<br>") + "</div>" : "") +
       '<button class="btn shop" data-nav="winkel">🛍️ Muntjes uitgeven</button>' +
       '<button class="btn play" data-nav="oefenen">▶ Nog een rondje</button>' +
       '<button class="btn ghost" data-nav="home">🏠 Naar huis</button>' +
       "</div>");
-    confetti(); AudioFX.play("feest");
+    confetti();
+    if (newUnlocks.length || newBadges.length) { AudioFX.play("levelup"); setTimeout(function () { showNudge(randomMotivatie()); }, 600); }
+    else AudioFX.play("feest");
   }
 
   function checkUnlocksAndBadges() {
@@ -476,35 +563,62 @@
         if (state.badges.indexOf(id) < 0) { state.badges.push(id); state._justBadges.push(DATA.regios[r] + " compleet!"); }
       }
     });
+    // winkel-unlocks bij een nieuwe drempel (5/10/20/30 gekend)
+    state._justUnlocks = [];
+    DATA.gates.forEach(function (g) {
+      if (g > 0 && m >= g && (state.shopTier || 0) < g) {
+        state.shopTier = g;
+        var nw = DATA.shop.filter(function (s) { return (s.minMastered || 0) === g; });
+        var emojis = nw.slice(0, 5).map(function (s) { return s.emoji; }).join(" ");
+        state._justUnlocks.push("Nieuw in de winkel (bij " + g + " gekend)! " + emojis);
+      }
+    });
   }
 
   // ---------------------------------------------------------------- Scherm: Winkel
   function renderWinkel() {
     tickNeeds(); save();
     function card(it) {
-      var owned = it.type !== "eten" && state.owned.indexOf(it.id) >= 0;
-      var worn = state.equipped === it.id;
-      var btn = it.type === "eten"
-        ? '<button class="buy" data-buy="' + it.id + '">Koop</button>'
-        : owned
-          ? (it.type === "kleren"
-            ? '<button class="buy ' + (worn ? "on" : "") + '" data-wear="' + it.id + '">' + (worn ? "Draagt ✓" : "Draag") + "</button>"
-            : '<button class="buy on" disabled>In huis ✓</button>')
-          : '<button class="buy" data-buy="' + it.id + '">Koop</button>';
-      return '<div class="item"><div class="ico">' + it.emoji + "</div><div>" + it.naam +
+      var locked = isLocked(it);
+      var owned = it.type !== "eten" && owns(it.id);
+      var worn = it.type === "kleren" && state.equipped === it.id;
+      var btn;
+      if (locked) {
+        btn = '<div class="lockmsg">🔒 vanaf ' + it.minMastered + " gekend</div>";
+      } else if (owned) {
+        btn = it.type === "kleren"
+          ? '<button class="buy ' + (worn ? "on" : "") + '" data-wear="' + it.id + '">' + (worn ? "Draagt ✓" : "Draag") + "</button>"
+          : it.type === "upgrade"
+            ? '<button class="buy on" disabled>In bezit ✓</button>'
+            : '<button class="buy on" disabled>In huis ✓</button>';
+      } else {
+        var canAfford = state.coins >= it.prijs;
+        btn = '<button class="buy' + (canAfford ? "" : " poor") + '" data-buy="' + it.id + '">Koop</button>';
+      }
+      return '<div class="item' + (locked ? " locked" : "") + '"><div class="ico">' + it.emoji + "</div><div>" + esc(it.naam) +
         '</div><div class="price">' + it.prijs + " 💰</div>" + btn + "</div>";
     }
-    function sectie(type, titel) {
-      return "<h3>" + titel + "</h3><div class=\"shopgrid\">" +
-        DATA.shop.filter(function (s) { return s.type === type; }).map(card).join("") + "</div>";
-    }
+    function grid(list) { return '<div class="shopgrid">' + list.map(card).join("") + "</div>"; }
+    function byType(t) { return DATA.shop.filter(function (s) { return s.type === t; }); }
+    function decoScene(sc) { return DATA.shop.filter(function (s) { return s.type === "deco" && (s.scene || "huis") === sc; }); }
+
+    var tuinSectie = owns("tuin")
+      ? "<h3>🌳 Voor in de tuin</h3>" + grid(decoScene("tuin"))
+      : '<h3>🌳 Voor in de tuin</h3><p class="info">Leg eerst een 🌳 <b>Tuin</b> aan bij Upgrades!</p>';
+    var bovenSectie = owns("verdieping")
+      ? "<h3>🛏️ Bovenverdieping</h3>" + grid(decoScene("boven"))
+      : '<h3>🛏️ Bovenverdieping</h3><p class="info">Koop eerst een 🏠 <b>Extra verdieping</b> bij Upgrades!</p>';
+
     h(topbar("Winkel") +
       '<div class="screen">' +
-      '<div class="petyard small">' + petSVG() + "</div>" +
+      sceneHTML(state.currentScene, "shoppeek") +
       needsBars() +
-      sectie("eten", "🍽️ Eten") +
-      sectie("kleren", "👕 Kleren") +
-      sectie("deco", "🏠 Voor in huis") +
+      "<h3>🍽️ Eten</h3>" + grid(byType("eten")) +
+      "<h3>👕 Kleren</h3>" + grid(byType("kleren")) +
+      "<h3>🏠 Voor in huis</h3>" + grid(decoScene("huis")) +
+      "<h3>⭐ Upgrades</h3>" + grid(byType("upgrade")) +
+      tuinSectie +
+      bovenSectie +
       '<div class="feedback" id="shopfb"></div>' +
       "</div>");
 
@@ -514,27 +628,40 @@
     appEl.querySelectorAll("[data-wear]").forEach(function (b) {
       b.addEventListener("click", function () {
         var id = b.getAttribute("data-wear");
-        state.equipped = state.equipped === id ? null : id; save(); renderWinkel();
+        state.equipped = state.equipped === id ? null : id; save(); AudioFX.play("pop"); renderWinkel();
       });
     });
   }
 
   function buy(id) {
-    var it = DATA.shop.filter(function (s) { return s.id === id; })[0];
+    var it = shopItem(id);
     if (!it) return;
-    if (state.coins < it.prijs) { el("shopfb").textContent = "Nog niet genoeg muntjes — eerst even oefenen! 💪"; return; }
+    if (isLocked(it)) {
+      el("shopfb").textContent = "Dit kun je kopen vanaf " + it.minMastered + " gekende begrippen — leer er nog een paar! 💪";
+      AudioFX.play("fout"); return;
+    }
+    if (it.type !== "eten" && owns(id)) return;
+    if (state.coins < it.prijs) {
+      el("shopfb").textContent = "Nog niet genoeg muntjes — eerst even oefenen! 💪";
+      AudioFX.play("fout"); return;
+    }
     state.coins -= it.prijs;
     if (it.type === "eten") {
       state.needs.honger = clamp(state.needs.honger + 20);
       state.needs.blij = clamp(state.needs.blij + 8);
       state.needs.energie = clamp(state.needs.energie + 10);
+      AudioFX.play("koop");
     } else {
-      if (state.owned.indexOf(id) < 0) state.owned.push(id);
-      if (it.type === "kleren") state.equipped = id;
-      else if (state.deco.indexOf(id) < 0) state.deco.push(id);
+      if (!owns(id)) state.owned.push(id);
       state.needs.blij = clamp(state.needs.blij + 12);
+      if (it.type === "kleren") { state.equipped = id; AudioFX.play("koop"); }
+      else if (it.type === "upgrade") {
+        state.currentScene = it.unlockScene;
+        AudioFX.play("unlock");
+        showNudge("Joepie! Je hebt nu een " + it.naam.toLowerCase() + "! 🎉");
+      } else { AudioFX.play("koop"); }
     }
-    save(); confetti(); AudioFX.play("munt"); renderWinkel();
+    save(); confetti(); renderWinkel();
     el("shopfb").textContent = state.pet.naam + " is er blij mee! " + it.emoji;
   }
 
@@ -686,6 +813,16 @@
         case "munt":   note(1180, 0, 0.06, "square", 0.12); note(1570, 0.05, 0.09, "square", 0.12); break;
         case "feest":  [523, 659, 784, 1046].forEach(function (f, i) { note(f, i * 0.1, 0.22, "triangle", 0.22); }); break;
         case "pop":    note(520, 0, 0.09, "sine", 0.2); break;
+        // kaching bij een aankoop
+        case "koop":   note(988, 0, 0.07, "square", 0.14); note(1319, 0.06, 0.12, "square", 0.14); break;
+        // iets nieuws ontgrendeld in de winkel
+        case "unlock": [523, 784, 1046].forEach(function (f, i) { note(f, i * 0.07, 0.14, "triangle", 0.2); }); break;
+        // level-up / nieuwe groei-stage: grote fanfare
+        case "levelup":[523, 659, 784, 1046, 1319].forEach(function (f, i) { note(f, i * 0.09, 0.26, "triangle", 0.24); }); break;
+        // zacht geeuwtje bij slapen
+        case "slaap":  note(392, 0, 0.3, "sine", 0.18); note(294, 0.22, 0.4, "sine", 0.16); break;
+        // zachte nudge
+        case "nudge":  note(740, 0, 0.07, "sine", 0.14); note(880, 0.06, 0.1, "sine", 0.12); break;
       }
     }
     return { play: play, ensure: ensure };
@@ -707,7 +844,7 @@
       state.needs.energie = clamp(state.needs.energie + 45);
       state.needs.blij = clamp(state.needs.blij + 4);
       state.lastTick = Date.now();
-      save(); AudioFX.play("pop");
+      save(); AudioFX.play("slaap");
       homeMsg = "Hamm… heerlijk geslapen! Ik heb weer energie ✨😴";
       renderHome();
     }
@@ -716,21 +853,45 @@
   function init() {
     appEl = document.getElementById("app");
     load(); initConfetti();
+    // demo-modus (?demo) voor testen: rijke, niet-opgeslagen staat
+    if (/[?&]demo/.test(location.search)) {
+      demoMode = true;
+      state.coins = 9999; state.unlockedCount = DATA.items.length;
+      DATA.items.slice(0, 26).forEach(function (it) { state.progress[it.id] = { box: 5, goed: 9, fout: 0, dueAt: 0, introduced: true }; });
+      state.owned = DATA.shop.filter(function (s) { return s.type !== "eten"; }).map(function (s) { return s.id; });
+      state.shopTier = 30;
+    }
     document.body.addEventListener("click", function (e) {
       AudioFX.ensure(); // audio ontgrendelen bij eerste klik
       var mt = e.target.closest("[data-mute]");
       if (mt) { state.muted = !state.muted; save(); mt.textContent = state.muted ? "🔇" : "🔊"; if (!state.muted) AudioFX.play("pop"); return; }
+      var sc = e.target.closest("[data-scene]");
+      if (sc) { state.currentScene = sc.getAttribute("data-scene"); save(); AudioFX.play("pop"); renderHome(); return; }
       var ac = e.target.closest("[data-act]");
       if (ac) { doAction(ac.getAttribute("data-act")); return; }
       var t = e.target.closest("[data-nav]");
       if (t) nav(t.getAttribute("data-nav"));
     });
+    var scm = /[?&]scene=(huis|tuin|boven)/.exec(location.search);
+    if (scm && sceneUnlocked(scm[1])) state.currentScene = scm[1];
     // deep-link voor testen/bladwijzers: ?screen=oefenen|winkel|album|ouders
     var m = /[?&]screen=([a-z]+)/.exec(location.search);
     if (m && ROUTES[m[1]]) nav(m[1]); else renderHome();
-    // service worker alleen op http(s)
+    // service worker alleen op http(s) + "nieuwe versie"-detectie
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg);
+        reg.addEventListener("updatefound", function () {
+          var nw = reg.installing; if (!nw) return;
+          nw.addEventListener("statechange", function () {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) showUpdateBanner(reg);
+          });
+        });
+      }).catch(function () {});
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (refreshing) return; refreshing = true; location.reload();
+      });
     }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

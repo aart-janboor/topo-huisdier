@@ -1,5 +1,8 @@
-/* Service worker — maakt de app offline speelbaar na de eerste keer. */
-var CACHE = "topo-huisdier-v5";
+/* Service worker — maakt de app offline speelbaar na de eerste keer.
+ * Een nieuwe versie WACHT (geen auto-skipWaiting), zodat de app een
+ * "nieuwe versie beschikbaar"-balkje kan tonen; pas bij een tik erop
+ * activeert de nieuwe versie (SKIP_WAITING-bericht hieronder). */
+var CACHE = "topo-huisdier-v6";
 var ASSETS = [
   "./",
   "./index.html",
@@ -13,7 +16,11 @@ var ASSETS = [
 ];
 
 self.addEventListener("install", function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }));
+});
+
+self.addEventListener("message", function (e) {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", function (e) {

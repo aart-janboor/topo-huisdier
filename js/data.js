@@ -97,21 +97,89 @@ window.TOPO_DATA = {
     "vlissingen": [0.125, 0.815], "terneuzen": [0.235, 0.895]
   },
 
-  // Winkel: eten vult honger+blijheid, kleren kun je dragen, deco siert het huis
+  // Niveau-drempels (aantal GEKENDE begrippen) waarop nieuwe winkel-spullen opengaan.
+  // Zo motiveer je om meer steden te leren voordat je het mooiste kunt kopen.
+  gates: [0, 5, 10, 20, 30],
+
+  // Motiverende teksten voor het tekstballonnetje bij de pinguïn (nudges).
+  motivaties: [
+    "Je kunt dit! 💪", "Wat ben jij slim! 🌟", "Ik ben trots op je! 🥰",
+    "Je wordt elke dag beter! 📈", "Samen leren is leuk! 📚", "Jij bent een topper! ⭐",
+    "Kom je me een nieuwe stad leren? 🗺️", "Nog eventjes oefenen en dan feest! 🎉",
+    "Wauw, wat ken jij er al veel! 😮", "Even oefenen? Dan verdien je muntjes! 💰",
+    "Knap hoor, ga zo door! 👏", "Jij maakt mij de blijste pinguïn! 🐧"
+  ],
+
+  // Scenes waarin deco verschijnt. 'huis' heb je altijd; 'tuin' en 'boven'
+  // koop je als upgrade in de winkel.
+  scenes: {
+    huis:  { naam: "Binnen", emoji: "🏠" },
+    tuin:  { naam: "Tuin",   emoji: "🌳", upgrade: "tuin" },
+    boven: { naam: "Boven",  emoji: "🛏️", upgrade: "verdieping" }
+  },
+
+  // Winkel. type: eten | kleren | deco | upgrade.
+  //  - eten: vult honger/energie/blijheid
+  //  - kleren: draag je op de pinguïn
+  //  - deco: verschijnt op positie (x,y) in de scene 'scene'
+  //  - upgrade: ontgrendelt een nieuwe scene (unlockScene)
+  // minMastered = pas te koop vanaf zoveel gekende begrippen.
   shop: [
-    { id: "mosje",        naam: "Mosje",         emoji: "🌿", prijs: 10, type: "eten" },
-    { id: "waterdruppel", naam: "Waterdruppel",  emoji: "💧", prijs: 8,  type: "eten" },
-    { id: "algjes",       naam: "Algjes",        emoji: "🫧", prijs: 12, type: "eten" },
-    { id: "bessen",       naam: "Bessen",        emoji: "🫐", prijs: 15, type: "eten" },
+    // ---- Eten ----
+    { id: "waterdruppel", naam: "Waterdruppel", emoji: "💧", prijs: 6,  type: "eten" },
+    { id: "mosje",        naam: "Mosje",        emoji: "🌿", prijs: 8,  type: "eten" },
+    { id: "algjes",       naam: "Algjes",       emoji: "🫧", prijs: 10, type: "eten" },
+    { id: "visje",        naam: "Visje",        emoji: "🐟", prijs: 12, type: "eten" },
+    { id: "bessen",       naam: "Bessen",       emoji: "🫐", prijs: 16, type: "eten" },
+    { id: "ijsje",        naam: "IJsje",        emoji: "🍦", prijs: 22, type: "eten", minMastered: 5 },
+    { id: "taart",        naam: "Taart",        emoji: "🎂", prijs: 30, type: "eten", minMastered: 10 },
 
-    { id: "hoedje",   naam: "Hoedje",   emoji: "🎩", prijs: 25, type: "kleren" },
-    { id: "brilletje",naam: "Brilletje",emoji: "🕶️", prijs: 20, type: "kleren" },
-    { id: "strikje",  naam: "Strikje",  emoji: "🎀", prijs: 18, type: "kleren" },
-    { id: "kroontje", naam: "Kroontje", emoji: "👑", prijs: 60, type: "kleren" },
+    // ---- Kleren (draag je op je pinguïn) ----
+    { id: "strikje",       naam: "Strikje",       emoji: "🎀", prijs: 25, type: "kleren" },
+    { id: "petje",         naam: "Petje",         emoji: "🧢", prijs: 40, type: "kleren" },
+    { id: "hoedje",        naam: "Hoge hoed",     emoji: "🎩", prijs: 45, type: "kleren" },
+    { id: "zonnebril",     naam: "Zonnebril",     emoji: "🕶️", prijs: 50, type: "kleren", minMastered: 5 },
+    { id: "zonnehoed",     naam: "Zonnehoed",     emoji: "👒", prijs: 55, type: "kleren", minMastered: 5 },
+    { id: "afstudeerhoed", naam: "Afstudeerhoed", emoji: "🎓", prijs: 85, type: "kleren", minMastered: 10 },
+    { id: "kroontje",      naam: "Gouden kroon",  emoji: "👑", prijs: 160, type: "kleren", minMastered: 20 },
 
-    { id: "plantje",    naam: "Plantje",       emoji: "🪴", prijs: 20, type: "deco" },
-    { id: "tulpje",     naam: "Tulpje",        emoji: "🌷", prijs: 15, type: "deco" },
-    { id: "molen",      naam: "Molentje",      emoji: "🌬️", prijs: 30, type: "deco" },
-    { id: "schilderij", naam: "Schilderijtje", emoji: "🖼️", prijs: 25, type: "deco" }
+    // ---- Voor in huis ----
+    { id: "tapijt",     naam: "Tapijt",      emoji: "🟫", prijs: 25,  type: "deco", scene: "huis", x: 50, y: 92, size: 64 },
+    { id: "plantje",    naam: "Kamerplant",  emoji: "🪴", prijs: 25,  type: "deco", scene: "huis", x: 13, y: 70, size: 42 },
+    { id: "schilderij", naam: "Schilderij",  emoji: "🖼️", prijs: 35,  type: "deco", scene: "huis", x: 22, y: 20, size: 40 },
+    { id: "klok",       naam: "Klok",        emoji: "🕰️", prijs: 30,  type: "deco", scene: "huis", x: 82, y: 18, size: 38 },
+    { id: "cactus",     naam: "Cactus",      emoji: "🌵", prijs: 30,  type: "deco", scene: "huis", x: 90, y: 82, size: 40, minMastered: 5 },
+    { id: "knuffel",    naam: "Knuffel",     emoji: "🧸", prijs: 40,  type: "deco", scene: "huis", x: 72, y: 86, size: 42, minMastered: 5 },
+    { id: "raam",       naam: "Raam",        emoji: "🪟", prijs: 45,  type: "deco", scene: "huis", x: 67, y: 24, size: 46, minMastered: 5 },
+    { id: "boekenkast", naam: "Boekenkast",  emoji: "📚", prijs: 60,  type: "deco", scene: "huis", x: 88, y: 64, size: 48, minMastered: 5 },
+    { id: "lamp",       naam: "Staande lamp",emoji: "💡", prijs: 35,  type: "deco", scene: "huis", x: 30, y: 14, size: 34, minMastered: 10 },
+    { id: "tv",         naam: "Televisie",   emoji: "📺", prijs: 70,  type: "deco", scene: "huis", x: 13, y: 55, size: 46, minMastered: 10 },
+    { id: "bank",       naam: "Bank",        emoji: "🛋️", prijs: 85,  type: "deco", scene: "huis", x: 33, y: 84, size: 54, minMastered: 10 },
+    { id: "gitaar",     naam: "Gitaar",      emoji: "🎸", prijs: 100, type: "deco", scene: "huis", x: 88, y: 86, size: 48, minMastered: 20 },
+    { id: "haard",      naam: "Open haard",  emoji: "🔥", prijs: 120, type: "deco", scene: "huis", x: 60, y: 84, size: 46, minMastered: 20 },
+
+    // ---- Upgrades ----
+    { id: "tuin",       naam: "Tuin aanleggen",   emoji: "🌳", prijs: 120, type: "upgrade", unlockScene: "tuin",  minMastered: 10 },
+    { id: "verdieping", naam: "Extra verdieping", emoji: "🏠", prijs: 220, type: "upgrade", unlockScene: "boven", minMastered: 20 },
+
+    // ---- Voor in de tuin (eerst de tuin aanleggen) ----
+    { id: "bloemperk",  naam: "Bloemenperk", emoji: "🌷", prijs: 25, type: "deco", scene: "tuin", x: 26, y: 80, size: 40, minMastered: 10 },
+    { id: "boom",       naam: "Boom",        emoji: "🌳", prijs: 40, type: "deco", scene: "tuin", x: 14, y: 50, size: 64, minMastered: 10 },
+    { id: "zonnebloem", naam: "Zonnebloem",  emoji: "🌻", prijs: 30, type: "deco", scene: "tuin", x: 72, y: 74, size: 46, minMastered: 10 },
+    { id: "vlinder",    naam: "Vlinder",     emoji: "🦋", prijs: 20, type: "deco", scene: "tuin", x: 30, y: 26, size: 32, minMastered: 10 },
+    { id: "bijtje",     naam: "Bijtje",      emoji: "🐝", prijs: 20, type: "deco", scene: "tuin", x: 74, y: 24, size: 30, minMastered: 10 },
+    { id: "tuinbankje", naam: "Tuinbankje",  emoji: "🪑", prijs: 45, type: "deco", scene: "tuin", x: 85, y: 72, size: 40, minMastered: 15 },
+    { id: "paddenstoel",naam: "Paddenstoel", emoji: "🍄", prijs: 25, type: "deco", scene: "tuin", x: 42, y: 86, size: 34, minMastered: 15 },
+    { id: "eendje",     naam: "Eendje",      emoji: "🦆", prijs: 30, type: "deco", scene: "tuin", x: 58, y: 84, size: 36, minMastered: 15 },
+    { id: "fontein",    naam: "Fontein",     emoji: "⛲", prijs: 80, type: "deco", scene: "tuin", x: 50, y: 66, size: 50, minMastered: 20 },
+    { id: "regenboog",  naam: "Regenboog",   emoji: "🌈", prijs: 60, type: "deco", scene: "tuin", x: 22, y: 16, size: 52, minMastered: 20 },
+
+    // ---- Voor de bovenverdieping (eerst de verdieping kopen) ----
+    { id: "bed",         naam: "Bed",          emoji: "🛏️", prijs: 70,  type: "deco", scene: "boven", x: 32, y: 82, size: 58, minMastered: 20 },
+    { id: "dakraam",     naam: "Dakraam",      emoji: "🪟", prijs: 45,  type: "deco", scene: "boven", x: 50, y: 16, size: 44, minMastered: 20 },
+    { id: "maanlamp",    naam: "Maanlampje",   emoji: "🌙", prijs: 40,  type: "deco", scene: "boven", x: 22, y: 18, size: 38, minMastered: 20 },
+    { id: "sterrenlamp", naam: "Sterrenlamp",  emoji: "🌟", prijs: 35,  type: "deco", scene: "boven", x: 76, y: 20, size: 36, minMastered: 20 },
+    { id: "wereldbol",   naam: "Wereldbol",    emoji: "🌍", prijs: 60,  type: "deco", scene: "boven", x: 66, y: 84, size: 44, minMastered: 25 },
+    { id: "telescoop",   naam: "Telescoop",    emoji: "🔭", prijs: 100, type: "deco", scene: "boven", x: 82, y: 74, size: 48, minMastered: 25 }
   ]
 };
