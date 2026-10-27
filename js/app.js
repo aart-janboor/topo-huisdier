@@ -712,6 +712,9 @@
       "Reeks: " + (state.streakDays || 0) + " dag(en).</p>" +
       '<div class="namebox"><input id="rename" maxlength="14" value="' + esc(state.pet.naam) + '">' +
       '<button class="btn mini" id="dorename">Naam opslaan</button></div>' +
+      '<div class="namebox"><label for="coinsin">Muntjes: </label>' +
+      '<input id="coinsin" type="number" inputmode="numeric" min="0" max="99999" value="' + (state.coins | 0) + '">' +
+      '<button class="btn mini" id="setcoins">Muntjes instellen</button></div>' +
       '<div class="row">' +
       '<button class="btn mini" data-nav="kaart">🗺️ Kaart instellen</button>' +
       '<button class="btn mini danger" id="reset">↺ Opnieuw beginnen</button>' +
@@ -721,6 +724,13 @@
     on("reset", "click", function () {
       if (confirm("Weet je het zeker? Alle voortgang en muntjes worden gewist.")) {
         state = defaultState(); save(); renderHome();
+      }
+    });
+    on("setcoins", "click", function () {
+      var n = parseInt(el("coinsin").value, 10);
+      if (isNaN(n) || n < 0) return;
+      if (confirm("Muntjes instellen op " + n + "?")) {
+        state.coins = n; save(); AudioFX.play("pop"); renderOuders();
       }
     });
     on("dorename", "click", function () {
