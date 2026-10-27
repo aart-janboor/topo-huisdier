@@ -2,7 +2,7 @@
  * Een nieuwe versie WACHT (geen auto-skipWaiting), zodat de app een
  * "nieuwe versie beschikbaar"-balkje kan tonen; pas bij een tik erop
  * activeert de nieuwe versie (SKIP_WAITING-bericht hieronder). */
-var CACHE = "topo-huisdier-v7";
+var CACHE = "topo-huisdier-v8";
 var ASSETS = [
   "./",
   "./index.html",
@@ -16,7 +16,15 @@ var ASSETS = [
 ];
 
 self.addEventListener("install", function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }));
+  // cache:"reload" omzeilt de HTTP-cache, anders belanden oude bestanden in de nieuwe cache
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    return Promise.all(ASSETS.map(function (u) {
+      return fetch(new Request(u, { cache: "reload" })).then(function (r) {
+        if (!r.ok) throw new Error(u);
+        return c.put(u, r);
+      });
+    }));
+  }));
 });
 
 self.addEventListener("message", function (e) {
