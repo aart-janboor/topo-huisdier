@@ -1,0 +1,146 @@
+:root { font-family: "Comic Sans MS", "Trebuchet MS", system-ui, sans-serif; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body {
+  background: linear-gradient(160deg, #ffe3f1 0%, #e9e1ff 100%);
+  min-height: 100vh; color: #2a2340;
+}
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; }
+
+/* Topbar */
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: linear-gradient(90deg, #ff9ec7, #b06ad6); color: #fff;
+}
+.topbar b { font-size: 18px; }
+.tb-right { display: flex; align-items: center; gap: 8px; }
+.coins { background: rgba(255, 255, 255, .25); padding: 6px 12px; border-radius: 20px; font-weight: bold; }
+.iconbtn { background: rgba(255, 255, 255, .25); border: none; color: #fff; font-size: 18px; width: 38px; height: 38px; border-radius: 12px; cursor: pointer; }
+
+.screen { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* Pet */
+.petyard {
+  background: linear-gradient(180deg, #d8f3ff, #c3ffd6);
+  border-radius: 22px; padding: 14px; text-align: center;
+}
+.petyard.small { padding: 8px; }
+.pet-svg { width: 190px; height: 160px; transform-origin: bottom center; }
+.petname { font-weight: bold; color: #9a3ab0; font-size: 20px; margin-top: 2px; }
+.speech {
+  background: #fff; border-radius: 14px; padding: 10px 12px; margin: 10px auto 0; max-width: 320px;
+  font-size: 14px; box-shadow: 0 3px 8px rgba(0, 0, 0, .08);
+}
+.namebox { margin-top: 10px; display: flex; gap: 8px; justify-content: center; }
+.namebox input { font: inherit; padding: 8px 10px; border: 2px solid #e7d6f5; border-radius: 10px; width: 60%; }
+
+/* Bars */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.bar .lbl { width: 76px; }
+.track { flex: 1; height: 14px; background: #eee; border-radius: 8px; overflow: hidden; }
+.fill { height: 100%; border-radius: 8px; transition: width .4s; }
+.fill.blij { background: #ffcb47; } .fill.honger { background: #ff8f6b; } .fill.energie { background: #6bc9ff; }
+
+.progress-line { text-align: center; font-size: 14px; color: #6b5b85; font-weight: bold; }
+
+/* Buttons */
+.btn {
+  font: inherit; font-weight: bold; font-size: 17px; border: none; border-radius: 16px;
+  padding: 14px; cursor: pointer; color: #fff; box-shadow: 0 4px 0 rgba(0, 0, 0, .15);
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
+.btn.play { background: linear-gradient(90deg, #46b358, #2e9e7a); }
+.btn.shop { background: linear-gradient(90deg, #ff9ec7, #b06ad6); }
+.btn.album { background: linear-gradient(90deg, #6bc9ff, #5a8ee0); }
+.btn.ghost { background: #ece6f5; color: #6b5b85; box-shadow: 0 4px 0 rgba(0, 0, 0, .08); }
+.btn.mini { font-size: 15px; padding: 10px 12px; background: #b06ad6; }
+.btn.mini.danger { background: #e06666; }
+.row { display: flex; gap: 10px; } .row .btn { flex: 1; }
+
+/* Map */
+.bigmap { border-radius: 16px; overflow: hidden; border: 3px solid #e7d6f5; background: #dfeefc; }
+.bigmap img { display: block; width: 100%; }
+
+/* Quiz */
+.question { font-weight: bold; font-size: 20px; color: #9a3ab0; text-align: center; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opt {
+  font: inherit; font-size: 17px; padding: 16px 6px; border: 2px solid #e7d6f5; border-radius: 14px;
+  background: #faf5ff; cursor: pointer; min-height: 56px;
+}
+.opt.good { background: #c8f0cf; border-color: #46b358; }
+.opt.bad { background: #ffd6d6; border-color: #e06666; }
+.opt:disabled { cursor: default; }
+.feedback { min-height: 26px; text-align: center; font-weight: bold; }
+.feedback .ok { color: #2e9e7a; } .feedback .no { color: #c0392b; }
+
+/* Intro */
+.intro .introcard { text-align: center; display: flex; flex-direction: column; gap: 10px; }
+.newbadge { align-self: center; background: #ffcb47; color: #6b4b00; font-weight: bold; padding: 4px 16px; border-radius: 20px; letter-spacing: 1px; }
+.introcard h2 { margin: 2px; color: #9a3ab0; }
+.teken { font-size: 16px; }
+.weetje { background: #f3ecfb; border-radius: 12px; padding: 10px 12px; font-size: 15px; }
+
+/* Shop */
+.shopgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.item { border: 2px solid #eee; border-radius: 14px; padding: 10px; text-align: center; }
+.item .ico { font-size: 38px; } .item .price { color: #b06ad6; font-weight: bold; margin: 2px 0 6px; }
+.buy { font: inherit; border: none; border-radius: 10px; padding: 8px 12px; background: #ffcb47; cursor: pointer; font-weight: bold; }
+.buy.on { background: #c8f0cf; }
+h3 { margin: 6px 0 2px; color: #9a3ab0; }
+
+/* Album */
+.album { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.sticker { border: 2px dashed #ccc; border-radius: 12px; padding: 8px 4px; text-align: center; background: #f7f7f7; opacity: .7; }
+.sticker.got { border-style: solid; border-color: #46b358; background: #eafaee; opacity: 1; }
+.s-teken { font-weight: bold; font-size: 20px; color: #9a3ab0; }
+.s-naam { font-size: 12px; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge { background: #fff6da; border: 1px solid #ffcb47; border-radius: 20px; padding: 4px 10px; font-size: 13px; }
+.newbadges { text-align: center; color: #b06ad6; font-weight: bold; }
+
+/* Tables (ouders) */
+.ouders .info { font-size: 14px; color: #555; }
+table.voortgang { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.voortgang th, table.voortgang td { text-align: left; padding: 7px 6px; border-bottom: 1px solid #eee; }
+table.voortgang td.c, table.voortgang th:nth-child(2) { text-align: center; font-weight: bold; }
+.st { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.st.gekend { background: #c8f0cf; } .st.lerend { background: #fff0c2; } .st.nieuw { background: #eee; }
+.lbl { font: inherit; padding: 6px; border: 2px solid #e7d6f5; border-radius: 8px; text-align: center; }
+small { color: #999; font-size: 11px; }
+.info { text-align: center; color: #6b5b85; }
+
+/* Confetti overlay */
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 50; }
+
+/* ---- Grotere / landscape tablets (bijv. 11") ---- */
+@media (orientation: landscape) and (min-width: 800px) {
+  #app { max-width: 1000px; }
+
+  /* niet-quiz schermen: inhoud gecentreerd, niet uitgerekt */
+  .screen:not(.quiz) { max-width: 600px; margin: 0 auto; width: 100%; }
+  .intro .introcard { max-width: 640px; margin: 0 auto; }
+
+  /* Oefenen in twee kolommen: kaart links, vraag + antwoorden rechts */
+  .screen.quiz {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "prog prog" "map question" "map choices" "map feedback";
+    column-gap: 22px; row-gap: 14px;
+    align-content: start;
+  }
+  .screen.quiz .progress-line { grid-area: prog; }
+  .screen.quiz .bigmap { grid-area: map; align-self: start; position: sticky; top: 70px; }
+  .screen.quiz .bigmap img { max-height: 76vh; width: auto; margin: 0 auto; }
+  .screen.quiz .question { grid-area: question; align-self: end; }
+  .screen.quiz .choices { grid-area: choices; align-content: start; }
+  .screen.quiz .feedback { grid-area: feedback; }
+  .screen.quiz .opt { font-size: 18px; min-height: 64px; }
+}
+
+/* De kaart nooit onnodig groot op brede schermen in portret */
+@media (min-width: 900px) and (orientation: portrait) {
+  #app { max-width: 560px; }
+}
