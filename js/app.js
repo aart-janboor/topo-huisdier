@@ -29,7 +29,7 @@
       owned: [],        // alles wat gekocht is (kleren, deco, upgrades) — ids
       equipped: null,   // gedragen kleren-id
       deco: [],         // (legacy) niet meer gebruikt; scene leest uit owned
-      currentScene: "huis",
+      currentScene: "buiten",
       shopTier: 0,      // hoogste bereikte unlock-drempel (voor "nieuw in winkel")
       progress: {},     // id -> {box, goed, fout, dueAt, introduced}
       unlockedCount: 5,
@@ -298,8 +298,45 @@
       bar("Honger", "honger", "honger") + bar("Energie", "energie", "energie") + "</div>";
   }
 
-  // Tekent een scene (huis/tuin/boven) met de gekochte deco + de pinguïn.
+  // Het huis van buiten: groeit mee (extra verdieping, tuin met hek en bloemen).
+  function houseSVG() {
+    var up = owns("verdieping"), tuin = owns("tuin");
+    var top = up ? 80 : 135;
+    var win = function (x, y, w, hh) {
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + hh + '" rx="3" fill="#bfe8ff" stroke="#fff" stroke-width="4"/>' +
+        '<path d="M' + (x + w / 2) + " " + y + "v" + hh + "M" + x + " " + (y + hh / 2) + "h" + w + '" stroke="#fff" stroke-width="2"/>';
+    };
+    var g = "";
+    if (tuin) {
+      g += '<path d="M188 205h24l14 20h-52z" fill="#e8d3a8"/>';
+      for (var i = 0; i < 6; i++) {
+        g += '<rect x="' + (18 + i * 14) + '" y="185" width="8" height="22" rx="2" fill="#fff" stroke="#d9cdbb"/>' +
+          '<rect x="' + (302 + i * 14) + '" y="185" width="8" height="22" rx="2" fill="#fff" stroke="#d9cdbb"/>';
+      }
+      g += '<text x="22" y="182" font-size="62">🌳</text><text x="318" y="226" font-size="26">🌷</text>' +
+        '<text x="348" y="228" font-size="26">🌻</text><text x="108" y="226" font-size="24">🌼</text>' +
+        '<text x="274" y="228" font-size="24">🌸</text>';
+    }
+    return '<svg class="house-svg" viewBox="50 20 300 215" preserveAspectRatio="xMidYMax meet" aria-hidden="true">' +
+      g +
+      '<rect x="245" y="' + (top - 46) + '" width="16" height="34" fill="#a5483f"/>' +
+      '<rect x="120" y="135" width="160" height="70" fill="#f6d8b0"/>' +
+      (up ? '<rect x="120" y="80" width="160" height="55" fill="#f9e4c4"/>' +
+        '<rect x="120" y="131" width="160" height="6" fill="#d9b98c"/>' +
+        win(135, 94, 36, 30) + win(186, 94, 28, 30) + win(229, 94, 36, 30) : "") +
+      win(135, 150, 36, 30) + win(229, 150, 36, 30) +
+      '<rect x="187" y="160" width="26" height="45" rx="3" fill="#8b5a2b"/><circle cx="207" cy="184" r="2.5" fill="#f5c542"/>' +
+      '<polygon points="108,' + top + " 200," + (top - 52) + " 292," + top + '" fill="#c0504d"/>' +
+      '<rect x="112" y="205" width="176" height="5" fill="#b9a389"/>' +
+      "</svg>";
+  }
+
+  // Tekent een scene (buiten/huis/tuin/boven) met de gekochte deco + de pinguïn.
   function sceneHTML(scene, extraClass) {
+    if (scene === "buiten") {
+      return '<div class="scene buiten' + (extraClass ? " " + extraClass : "") + '">' + houseSVG() +
+        '<div class="pet-wrap">' + petSVG() + "</div></div>";
+    }
     var objs = DATA.shop.filter(function (s) {
       return s.type === "deco" && (s.scene || "huis") === scene && owns(s.id);
     }).map(function (s) {
@@ -363,7 +400,7 @@
         : "Hoi! Zullen we samen de kaart oefenen? 🗺️";
     homeMsg = null;
 
-    if (!sceneUnlocked(state.currentScene)) state.currentScene = "huis";
+    if (!sceneUnlocked(state.currentScene)) state.currentScene = "buiten";
 
     var nameBlock = state.pet.nameSet ? "" :
       '<div class="namebox"><input id="petname" placeholder="Naam voor je pinguïn" maxlength="14" value="' +
@@ -611,7 +648,7 @@
 
     h(topbar("Winkel") +
       '<div class="screen">' +
-      sceneHTML(state.currentScene, "shoppeek") +
+      sceneHTML(state.currentScene === "buiten" ? "huis" : state.currentScene, "shoppeek") +
       needsBars() +
       "<h3>🍽️ Eten</h3>" + grid(byType("eten")) +
       "<h3>👕 Kleren</h3>" + grid(byType("kleren")) +
@@ -713,8 +750,8 @@
       '<div class="namebox"><input id="rename" maxlength="14" value="' + esc(state.pet.naam) + '">' +
       '<button class="btn mini" id="dorename">Naam opslaan</button></div>' +
       '<div class="namebox"><label for="coinsin">Muntjes: </label>' +
-      '<input id="coinsin" type="number" inputmode="numeric" min="0" max="99999" value="' + (state.coins | 0) + '">' +
-      '<button class="btn mini" id="setcoins">Muntjes instellen</button></div>' +
+      '<input id="coinsin" type="number" inputmode="numeric" min="0" max="' + (state.coins | 0) + '" value="' + (state.coins | 0) + '">' +
+      '<button class="btn mini" id="setcoins">Muntjes verlagen</button></div>' +
       '<div class="row">' +
       '<button class="btn mini" data-nav="kaart">🗺️ Kaart instellen</button>' +
       '<button class="btn mini danger" id="reset">↺ Opnieuw beginnen</button>' +
@@ -729,7 +766,8 @@
     on("setcoins", "click", function () {
       var n = parseInt(el("coinsin").value, 10);
       if (isNaN(n) || n < 0) return;
-      if (confirm("Muntjes instellen op " + n + "?")) {
+      if (n >= state.coins) { alert("Je kunt het aantal muntjes alleen verlagen (nu " + state.coins + ")."); return; }
+      if (confirm("Muntjes verlagen van " + state.coins + " naar " + n + "?")) {
         state.coins = n; save(); AudioFX.play("pop"); renderOuders();
       }
     });
@@ -882,7 +920,7 @@
       var t = e.target.closest("[data-nav]");
       if (t) nav(t.getAttribute("data-nav"));
     });
-    var scm = /[?&]scene=(huis|tuin|boven)/.exec(location.search);
+    var scm = /[?&]scene=(buiten|huis|tuin|boven)/.exec(location.search);
     if (scm && sceneUnlocked(scm[1])) state.currentScene = scm[1];
     // deep-link voor testen/bladwijzers: ?screen=oefenen|winkel|album|ouders
     var m = /[?&]screen=([a-z]+)/.exec(location.search);

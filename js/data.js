@@ -110,9 +110,10 @@ window.TOPO_DATA = {
     "Knap hoor, ga zo door! 👏", "Jij maakt mij de blijste pinguïn! 🐧"
   ],
 
-  // Scenes waarin deco verschijnt. 'huis' heb je altijd; 'tuin' en 'boven'
+  // Scenes. 'buiten' (het huis van buiten, groeit mee met upgrades) en 'huis' (binnen, met deco) heb je altijd; 'tuin' en 'boven'
   // koop je als upgrade in de winkel.
   scenes: {
+    buiten: { naam: "Mijn huis", emoji: "🏡" },
     huis:  { naam: "Binnen", emoji: "🏠" },
     tuin:  { naam: "Tuin",   emoji: "🌳", upgrade: "tuin" },
     boven: { naam: "Boven",  emoji: "🛏️", upgrade: "verdieping" }
@@ -136,6 +137,7 @@ window.TOPO_DATA = {
 
     // ---- Kleren (draag je op je pinguïn) ----
     { id: "strikje",       naam: "Strikje",       emoji: "🎀", prijs: 25, type: "kleren" },
+    { id: "brilletje",     naam: "Brilletje",     emoji: "🕶️", prijs: 30, type: "kleren" },
     { id: "petje",         naam: "Petje",         emoji: "🧢", prijs: 40, type: "kleren" },
     { id: "hoedje",        naam: "Hoge hoed",     emoji: "🎩", prijs: 45, type: "kleren" },
     { id: "zonnebril",     naam: "Zonnebril",     emoji: "🕶️", prijs: 50, type: "kleren", minMastered: 5 },
@@ -147,6 +149,8 @@ window.TOPO_DATA = {
     { id: "tapijt",     naam: "Tapijt",      emoji: "🟫", prijs: 25,  type: "deco", scene: "huis", x: 50, y: 92, size: 64 },
     { id: "plantje",    naam: "Kamerplant",  emoji: "🪴", prijs: 25,  type: "deco", scene: "huis", x: 13, y: 70, size: 42 },
     { id: "schilderij", naam: "Schilderij",  emoji: "🖼️", prijs: 35,  type: "deco", scene: "huis", x: 22, y: 20, size: 40 },
+    { id: "tulpje",     naam: "Tulpje",      emoji: "🌷", prijs: 20,  type: "deco", scene: "huis", x: 40, y: 72, size: 34 },
+    { id: "molen",      naam: "Molentje",    emoji: "🌬️", prijs: 30,  type: "deco", scene: "huis", x: 50, y: 22, size: 36 },
     { id: "klok",       naam: "Klok",        emoji: "🕰️", prijs: 30,  type: "deco", scene: "huis", x: 82, y: 18, size: 38 },
     { id: "cactus",     naam: "Cactus",      emoji: "🌵", prijs: 30,  type: "deco", scene: "huis", x: 90, y: 82, size: 40, minMastered: 5 },
     { id: "knuffel",    naam: "Knuffel",     emoji: "🧸", prijs: 40,  type: "deco", scene: "huis", x: 72, y: 86, size: 42, minMastered: 5 },
