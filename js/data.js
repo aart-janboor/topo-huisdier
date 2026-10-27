@@ -86,15 +86,15 @@ window.TOPO_DATA = {
   // app het gevraagde nummer kan omcirkelen. Afgelezen van de kaart en visueel
   // geverifieerd via een overlay. Alleen steden (wateren/gebieden = geen punt).
   coords: {
-    "haarlem": [0.58, 0.42], "den-haag": [0.42, 0.53], "utrecht": [0.755, 0.53],
-    "den-burg": [0.62, 0.065], "den-helder": [0.63, 0.115], "alkmaar": [0.60, 0.245],
-    "hoorn": [0.765, 0.25], "volendam": [0.765, 0.29], "amsterdam": [0.71, 0.42],
-    "amstelveen": [0.60, 0.44], "noordwijk": [0.53, 0.465], "leiden": [0.545, 0.49],
-    "hilversum": [0.795, 0.48], "amersfoort": [0.905, 0.50], "hoek-van-holland": [0.405, 0.57],
-    "gouda": [0.605, 0.56], "zeist": [0.805, 0.55], "schiedam": [0.525, 0.57],
-    "rotterdam": [0.58, 0.57], "nieuwegein": [0.715, 0.575], "renesse": [0.225, 0.675],
-    "zierikzee": [0.28, 0.725], "goes": [0.28, 0.80], "middelburg": [0.19, 0.785],
-    "vlissingen": [0.13, 0.815], "terneuzen": [0.235, 0.90]
+    "haarlem": [0.56, 0.40], "den-haag": [0.42, 0.52], "utrecht": [0.75, 0.515],
+    "den-burg": [0.63, 0.055], "den-helder": [0.635, 0.105], "alkmaar": [0.60, 0.27],
+    "hoorn": [0.725, 0.255], "volendam": [0.73, 0.30], "amsterdam": [0.69, 0.41],
+    "amstelveen": [0.64, 0.42], "noordwijk": [0.51, 0.45], "leiden": [0.535, 0.49],
+    "hilversum": [0.79, 0.455], "amersfoort": [0.885, 0.485], "hoek-van-holland": [0.40, 0.57],
+    "gouda": [0.61, 0.565], "zeist": [0.79, 0.525], "schiedam": [0.52, 0.585],
+    "rotterdam": [0.575, 0.585], "nieuwegein": [0.72, 0.575], "renesse": [0.215, 0.675],
+    "zierikzee": [0.275, 0.73], "goes": [0.29, 0.80], "middelburg": [0.18, 0.785],
+    "vlissingen": [0.125, 0.815], "terneuzen": [0.235, 0.895]
   },
 
   // Winkel: eten vult honger+blijheid, kleren kun je dragen, deco siert het huis
