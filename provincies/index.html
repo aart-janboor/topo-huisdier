@@ -3,16 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#2e9e7a">
-  <title>Topo per provincie 🎵</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="assets/icon-192.png">
-  <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="css/style.css">
+  <title>Verhuisd → Topo per provincie</title>
+  <meta http-equiv="refresh" content="0; url=https://aart-janboor.github.io/topo-provincie/">
+  <script>
+    // De provincie-app is verhuisd naar een eigen site (los installeerbaar).
+    // Oude service worker + cache opruimen zodat niemand in de oude versie hangt.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (rs) {
+        rs.forEach(function (r) { r.unregister(); });
+      }).catch(function () {});
+    }
+    if (window.caches && caches.keys) {
+      caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+    }
+    location.replace("https://aart-janboor.github.io/topo-provincie/");
+  </script>
+  <style>
+    body { font-family: system-ui, "Trebuchet MS", sans-serif; text-align: center; padding: 48px 20px; background: #e7f7ef; color: #233a33; }
+    a { color: #2e9e7a; font-weight: bold; }
+  </style>
 </head>
 <body>
-  <div id="app"><div class="screen"><p class="info">Laden…</p></div></div>
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+  <p>De provincie-app is verhuisd naar een eigen plek.</p>
+  <p><a href="https://aart-janboor.github.io/topo-provincie/">Ga naar Topo per provincie →</a></p>
 </body>
 </html>
