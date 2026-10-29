@@ -71,6 +71,23 @@ body {
 @keyframes flash { 0% { background: #fff3b0; } 100% { background: transparent; } }
 .nm.hidden { color: #b9c9c2; font-style: italic; font-size: 14px; }
 
+/* Eigen liedje opnemen/afspelen */
+.songcard { border: 3px solid #ffd6ea; background: #fff6fb; border-radius: 16px; padding: 12px 14px; }
+.songhead { font-weight: bold; color: #b06ad6; font-size: 17px; margin-bottom: 8px; }
+.songbody .note { margin-top: 0; }
+.recrow, .playrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn.rec { background: linear-gradient(90deg, #ff6b9d, #e0466f); }
+.btn.rec.stop { background: linear-gradient(90deg, #e06666, #c0392b); }
+.btn.play-s { background: linear-gradient(90deg, #46b358, #2e9e7a); }
+.btn.rep { background: #ece6f5; color: #6b5b85; box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+.btn.rep.on { background: linear-gradient(90deg, #ff9ec7, #b06ad6); color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.15); }
+.btn.mini { font-size: 14px; padding: 8px 12px; }
+.btn.mini.danger { background: #e06666; }
+.rectime { font-weight: bold; color: #c0392b; font-size: 18px; min-width: 48px; }
+.recdot { color: #c0392b; font-weight: bold; animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+.recmeta { color: #a98bbf; }
+
 /* Bladeren */
 .nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
 .nav .btn { background: linear-gradient(90deg, #46b358, #2e9e7a); flex: 1; }

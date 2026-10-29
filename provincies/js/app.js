@@ -62,15 +62,17 @@
 
   // ---- toestand ----
   var PK = "topo-provincies-v1";
-  var ui = { groepIdx: 0, toonNamen: true, gespiekt: {} };
+  var ui = { groepIdx: 0, toonNamen: true, gespiekt: {}, herhaal: true };
   try {
     var ps = JSON.parse(localStorage.getItem(PK) || "{}");
     if (typeof ps.groepIdx === "number" && ps.groepIdx >= 0 && ps.groepIdx < groepen.length) ui.groepIdx = ps.groepIdx;
     if (typeof ps.toonNamen === "boolean") ui.toonNamen = ps.toonNamen;
+    if (typeof ps.herhaal === "boolean") ui.herhaal = ps.herhaal;
   } catch (e) {}
   function bewaar() {
-    try { localStorage.setItem(PK, JSON.stringify({ groepIdx: ui.groepIdx, toonNamen: ui.toonNamen })); } catch (e) {}
+    try { localStorage.setItem(PK, JSON.stringify({ groepIdx: ui.groepIdx, toonNamen: ui.toonNamen, herhaal: ui.herhaal })); } catch (e) {}
   }
+  function groepHuidig() { return groepen[ui.groepIdx]; }
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -80,6 +82,8 @@
 
   function ga(delta) {
     stopZingen();
+    stopAfspelen();
+    stopOpnameStil();
     ui.groepIdx = (ui.groepIdx + delta + groepen.length) % groepen.length;
     ui.gespiekt = {};
     bewaar();
@@ -153,6 +157,12 @@
 
         "</div>" + // layout
 
+        // eigen liedje opnemen/afspelen
+        '<div class="songcard">' +
+          '<div class="songhead">🎤 Ons liedje — ' + esc(naam) + "</div>" +
+          '<div id="songbody" class="songbody"><p class="note">Even laden…</p></div>' +
+        "</div>" +
+
         // bladeren
         '<div class="nav">' +
           '<button class="btn nav-prev">◀ Vorige</button>' +
@@ -172,7 +182,7 @@
     var chips = app.querySelectorAll(".chip");
     for (var i = 0; i < chips.length; i++) {
       chips[i].onclick = function () {
-        stopZingen();
+        stopZingen(); stopAfspelen(); stopOpnameStil();
         ui.groepIdx = parseInt(this.getAttribute("data-i"), 10);
         ui.gespiekt = {}; bewaar(); render();
       };
@@ -201,6 +211,8 @@
         spiek(id, true);
       };
     }
+
+    laadLiedje(groepHuidig());
   }
 
   function spiek(id, flash) {
@@ -250,6 +262,155 @@
   }
   // stemmen laden soms pas na een event
   if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = function () {};
+
+  // ---- eigen liedje opnemen / bewaren / afspelen ----
+  // Opnames staan per provincie in IndexedDB (zelfde origin, offline, overleeft
+  // herstart). De herhaal-stand laat de opname steeds opnieuw afspelen (loop).
+  function idb() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open("topo-prov", 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore("liedjes"); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+  }
+  function idbDo(mode, fn) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var st = db.transaction("liedjes", mode).objectStore("liedjes");
+        var rq = fn(st);
+        rq.onsuccess = function () { res(rq.result); };
+        rq.onerror = function () { rej(rq.error); };
+      });
+    });
+  }
+  function liedjeGet(key) { return idbDo("readonly", function (s) { return s.get(key); }); }
+  function liedjePut(key, val) { return idbDo("readwrite", function (s) { return s.put(val, key); }); }
+  function liedjeDel(key) { return idbDo("readwrite", function (s) { return s["delete"](key); }); }
+
+  function fmtTijd(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  var rec = { mr: null, chunks: [], stream: null, t0: 0, timer: null, groep: null };
+  var player = null, playURL = null;
+
+  function stopStream() {
+    if (rec.stream) { rec.stream.getTracks().forEach(function (t) { t.stop(); }); rec.stream = null; }
+    if (rec.timer) { clearInterval(rec.timer); rec.timer = null; }
+  }
+  // opname stilletjes afbreken (bij wisselen van provincie) — niets opslaan
+  function stopOpnameStil() {
+    if (rec.mr && rec.mr.state === "recording") { rec.mr.onstop = null; try { rec.mr.stop(); } catch (e) {} }
+    rec.mr = null; rec.chunks = []; stopStream();
+  }
+  function stopAfspelen() {
+    if (player) { try { player.pause(); } catch (e) {} player = null; }
+    if (playURL) { URL.revokeObjectURL(playURL); playURL = null; }
+  }
+
+  function startOpname(groep) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      alert("Opnemen werkt niet in deze browser. Probeer Chrome of Safari op de tablet.");
+      return;
+    }
+    stopAfspelen();
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      rec.stream = stream; rec.chunks = []; rec.groep = groep;
+      var mr = new MediaRecorder(stream);
+      rec.mr = mr;
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) rec.chunks.push(e.data); };
+      mr.onstop = function () {
+        var type = mr.mimeType || (rec.chunks[0] && rec.chunks[0].type) || "audio/webm";
+        var blob = new Blob(rec.chunks, { type: type });
+        stopStream(); rec.mr = null;
+        liedjePut(groep, { blob: blob, mime: type, ts: Date.now() }).then(function () {
+          if (groepHuidig() === groep) laadLiedje(groep);
+        });
+      };
+      mr.start();
+      rec.t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+      opnameUI(true);
+      rec.timer = setInterval(function () {
+        var el = document.getElementById("rectime");
+        var nu = (window.performance && performance.now) ? performance.now() : Date.now();
+        if (el) el.textContent = fmtTijd((nu - rec.t0) / 1000);
+      }, 200);
+    })["catch"](function () {
+      alert("Geen toegang tot de microfoon. Sta de microfoon toe in de browser en probeer opnieuw.");
+    });
+  }
+  function stopOpname() {
+    if (rec.mr && rec.mr.state === "recording") { try { rec.mr.stop(); } catch (e) {} }
+  }
+
+  function opnameUI(bezig) {
+    var body = document.getElementById("songbody");
+    if (!body) return;
+    if (bezig) {
+      body.innerHTML =
+        '<div class="recrow">' +
+          '<button class="btn rec stop">⏹ Stop opname</button>' +
+          '<span class="rectime" id="rectime">0:00</span>' +
+          '<span class="recdot">● opname…</span>' +
+        "</div>";
+      body.querySelector(".stop").onclick = stopOpname;
+    }
+  }
+
+  function laadLiedje(groep) {
+    var body = document.getElementById("songbody");
+    if (!body) return;
+    liedjeGet(groep).then(function (opname) {
+      if (groepHuidig() !== groep) return;
+      if (opname && opname.blob) toonSpeler(body, groep, opname);
+      else toonOpnemer(body, groep);
+    })["catch"](function () { toonOpnemer(body, groep); });
+  }
+
+  function toonOpnemer(body, groep) {
+    body.innerHTML =
+      '<p class="note">Nog geen liedje voor deze provincie. Neem jullie eigen liedje op!</p>' +
+      '<div class="recrow"><button class="btn rec">🎤 Neem liedje op</button></div>';
+    body.querySelector(".rec").onclick = function () { startOpname(groep); };
+  }
+
+  function toonSpeler(body, groep, opname) {
+    stopAfspelen();
+    playURL = URL.createObjectURL(opname.blob);
+    player = new Audio(playURL);
+    player.loop = ui.herhaal;
+    body.innerHTML =
+      '<div class="playrow">' +
+        '<button class="btn play-s">▶ Afspelen</button>' +
+        '<button class="btn rep' + (ui.herhaal ? " on" : "") + '">🔁 Herhaal: ' + (ui.herhaal ? "aan" : "uit") + "</button>" +
+        '<button class="btn mini danger del">🗑 Opnieuw</button>' +
+      "</div>" +
+      '<p class="note recmeta">Opgenomen op ' + new Date(opname.ts).toLocaleDateString("nl-NL") + ". Tik Afspelen om jullie liedje te horen.</p>";
+
+    var playBtn = body.querySelector(".play-s");
+    var repBtn = body.querySelector(".rep");
+    player.onplay = function () { playBtn.textContent = "⏸ Pauze"; };
+    player.onpause = function () { playBtn.textContent = "▶ Afspelen"; };
+    player.onended = function () { playBtn.textContent = "▶ Afspelen"; };
+
+    playBtn.onclick = function () {
+      if (player.paused) player.play()["catch"](function () {}); else player.pause();
+    };
+    repBtn.onclick = function () {
+      ui.herhaal = !ui.herhaal; bewaar();
+      player.loop = ui.herhaal;
+      repBtn.textContent = "🔁 Herhaal: " + (ui.herhaal ? "aan" : "uit");
+      repBtn.classList.toggle("on", ui.herhaal);
+    };
+    body.querySelector(".del").onclick = function () {
+      if (!confirm("Dit liedje verwijderen en opnieuw opnemen?")) return;
+      stopAfspelen();
+      liedjeDel(groep).then(function () { if (groepHuidig() === groep) laadLiedje(groep); });
+    };
+  }
 
   // ---- update-balkje als er een nieuwe versie klaarstaat ----
   function toonUpdate(reg) {

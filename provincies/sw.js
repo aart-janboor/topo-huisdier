@@ -1,7 +1,7 @@
 /* Service worker voor de provincie-app — eigen scope (/provincies/) en eigen
  * cache, los van de hoofd-app. Nieuwe versie wacht tot er op het update-balkje
  * wordt getikt (SKIP_WAITING). */
-var CACHE = "topo-prov-v1";
+var CACHE = "topo-prov-v2";
 var ASSETS = [
   "./",
   "./index.html",
