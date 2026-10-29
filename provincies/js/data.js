@@ -85,9 +85,13 @@ window.TOPO_DATA = {
     { id: "zeeuws-vlaanderen",  naam: "Zeeuws-Vlaanderen",  categorie: "gebied", regio: "gebied", label: "G", weetje: "Het stukje Zeeland onder de Westerschelde 🌾" }
   ],
 
-  // Genormaliseerde posities (0..1) van de STAD-nummers op Kaart_0001, zodat de
-  // app het gevraagde nummer kan omcirkelen. Afgelezen van de kaart en visueel
-  // geverifieerd via een overlay. Alleen steden (wateren/gebieden = geen punt).
+  // Genormaliseerde posities (0..1) van de tekens op de kaart, zodat de app het
+  // gevraagde teken kan omcirkelen. Afgelezen van de kaart en visueel geverifieerd
+  // via een overlay.
+  // LET OP: de wateren (Romeinse cijfers) en gebieden (letters) staan ALLEEN in
+  // deze kopie, niet in ../../js/data.js (de hoofd-app toont die bewust niet).
+  // Bij opnieuw kopieren van ../../js/data.js: deze water-/gebied-coords weer
+  // toevoegen, anders verdwijnen de bolletjes bij Wateren/Gebieden.
   coords: {
     "haarlem": [0.56, 0.40], "den-haag": [0.42, 0.52], "utrecht": [0.75, 0.515],
     "den-burg": [0.63, 0.055], "den-helder": [0.635, 0.105], "alkmaar": [0.60, 0.27],
@@ -97,7 +101,18 @@ window.TOPO_DATA = {
     "gouda": [0.61, 0.565], "zeist": [0.79, 0.525], "schiedam": [0.52, 0.585],
     "rotterdam": [0.575, 0.585], "nieuwegein": [0.72, 0.575], "renesse": [0.215, 0.675],
     "zierikzee": [0.275, 0.73], "goes": [0.29, 0.80], "middelburg": [0.18, 0.785],
-    "vlissingen": [0.125, 0.815], "terneuzen": [0.235, 0.895]
+    "vlissingen": [0.125, 0.815], "terneuzen": [0.235, 0.895],
+
+    // Wateren (Romeinse cijfers I..X) — op de plek van het teken op de kaart
+    "waddenzee": [0.72, 0.04], "ijsselmeer": [0.87, 0.125], "markermeer": [0.82, 0.30],
+    "noordzeekanaal": [0.52, 0.335], "amsterdam-rijnkanaal": [0.70, 0.43],
+    "nieuwe-waterweg": [0.31, 0.565], "lek": [0.70, 0.595], "oosterschelde": [0.40, 0.825],
+    "westerschelde": [0.185, 0.83], "noordzee": [0.33, 0.39],
+
+    // Gebieden (letters A..G)
+    "texel": [0.63, 0.05], "haarlemmermeer": [0.605, 0.44], "randstad": [0.52, 0.525],
+    "groene-hart": [0.585, 0.515], "rijnmond": [0.33, 0.635], "biesbosch": [0.52, 0.655],
+    "zeeuws-vlaanderen": [0.29, 0.93]
   },
 
   // Niveau-drempels (aantal GEKENDE begrippen) waarop nieuwe winkel-spullen opengaan.

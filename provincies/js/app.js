@@ -140,7 +140,7 @@
               ? '<p class="note">De ' + esc(naam.toLowerCase()) +
                 " staan met " + (groep === "water" ? "Romeinse cijfers" : "letters") +
                 ' óp de kaart — zoek het teken dat bij de naam hoort.</p>'
-              : '<p class="note">Tik op een nummer om die naam even te zien.</p>') +
+              : '<p class="note">Tik op een teken op de kaart om die naam even te zien.</p>') +
           "</div>" +
 
           // rechts: namenlijst
