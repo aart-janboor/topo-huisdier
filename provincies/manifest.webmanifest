@@ -1,6 +1,7 @@
 {
   "name": "Topo per provincie",
   "short_name": "Topo provincie",
+  "id": "/topo-huisdier/provincies/",
   "description": "Oefen de topografie per provincie: kaart links, namen rechts (tonen/verbergen) en zing ze als liedje.",
   "start_url": "./index.html",
   "scope": "./",
