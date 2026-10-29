@@ -34,6 +34,9 @@ body {
 .col { min-width: 0; }
 
 /* Kaart */
+.maptools { display: flex; gap: 8px; margin-bottom: 8px; }
+.btn.bol { background: #ece6f5; color: #6b5b85; box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+.btn.bol.on { background: linear-gradient(90deg, #ff6b6b, #e0466f); color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.15); }
 .bigmap { position: relative; border-radius: 16px; overflow: hidden; border: 3px solid #cfe9dd; background: #dfeefc; }
 .bigmap img { display: block; width: 100%; }
 .note { font-size: 13px; color: #5d7a70; margin: 8px 2px 0; }
@@ -66,6 +69,17 @@ body {
 .tbl td { padding: 10px 8px; border-bottom: 2px solid #eef4f1; }
 .tbl .num { width: 46px; text-align: center; font-weight: bold; color: #2e9e7a; }
 .rij { cursor: pointer; }
+.btn.order { background: linear-gradient(90deg, #ffb347, #ff8c42); }
+/* Sorteer-modus */
+.tbl .ord { width: 78px; text-align: right; white-space: nowrap; }
+.rij.sort { cursor: default; background: #fffaf0; }
+.arrow {
+  font: inherit; font-size: 16px; font-weight: bold; cursor: pointer;
+  width: 34px; height: 34px; margin-left: 4px; border-radius: 10px;
+  border: none; color: #fff; background: #ff8c42; box-shadow: 0 3px 0 rgba(0,0,0,.15);
+}
+.arrow:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.15); }
+.arrow[disabled] { background: #e6ddd2; color: #bcae9c; box-shadow: none; cursor: default; }
 .rij:active { background: #f2fbf7; }
 .rij.flash { animation: flash 1s ease-out; }
 @keyframes flash { 0% { background: #fff3b0; } 100% { background: transparent; } }

@@ -36,11 +36,37 @@
   }
   function coordOf(item) { return (DATA.coords && DATA.coords[item.id]) || null; }
 
-  // Items van een groep, met een niet-leeg label, gesorteerd op nummer.
+  // Items van een groep, met een niet-leeg label. Standaard op nummer; als er een
+  // eigen volgorde bewaard is, die aanhouden (nieuwe items vallen achteraan terug
+  // op de nummervolgorde).
   function itemsVan(groep) {
-    return DATA.items
-      .filter(function (it) { return it.regio === groep && labelOf(it).trim() !== ""; })
-      .sort(function (a, b) { return sortKey(labelOf(a)) - sortKey(labelOf(b)); });
+    var lijst = DATA.items.filter(function (it) { return it.regio === groep && labelOf(it).trim() !== ""; });
+    var ord = ui.volgorde[groep];
+    if (ord && ord.length) {
+      var pos = {};
+      ord.forEach(function (id, i) { pos[id] = i; });
+      lijst.sort(function (a, b) {
+        var pa = (a.id in pos) ? pos[a.id] : 1e6, pb = (b.id in pos) ? pos[b.id] : 1e6;
+        if (pa !== pb) return pa - pb;
+        return sortKey(labelOf(a)) - sortKey(labelOf(b));
+      });
+    } else {
+      lijst.sort(function (a, b) { return sortKey(labelOf(a)) - sortKey(labelOf(b)); });
+    }
+    return lijst;
+  }
+
+  function verplaats(groep, id, delta) {
+    var ids = itemsVan(groep).map(function (it) { return it.id; });
+    var i = ids.indexOf(id), j = i + delta;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    ids.splice(i, 1); ids.splice(j, 0, id);
+    ui.volgorde[groep] = ids;
+    bewaar(); render();
+  }
+  function herstelVolgorde(groep) {
+    delete ui.volgorde[groep];
+    bewaar(); render();
   }
 
   // Sorteersleutel: "1".."26" -> getal, "I".."X" -> Romeins getal, "A".."G" -> letter.
@@ -62,15 +88,23 @@
 
   // ---- toestand ----
   var PK = "topo-provincies-v1";
-  var ui = { groepIdx: 0, toonNamen: true, gespiekt: {}, herhaal: true };
+  // volgorde = eigen namenvolgorde per groep ({groep: [id,...]}); sorteerModus is sessie-only.
+  var ui = { groepIdx: 0, toonNamen: true, gespiekt: {}, herhaal: true, toonBolletjes: true, volgorde: {}, sorteerModus: false };
   try {
     var ps = JSON.parse(localStorage.getItem(PK) || "{}");
     if (typeof ps.groepIdx === "number" && ps.groepIdx >= 0 && ps.groepIdx < groepen.length) ui.groepIdx = ps.groepIdx;
     if (typeof ps.toonNamen === "boolean") ui.toonNamen = ps.toonNamen;
     if (typeof ps.herhaal === "boolean") ui.herhaal = ps.herhaal;
+    if (typeof ps.toonBolletjes === "boolean") ui.toonBolletjes = ps.toonBolletjes;
+    if (ps.volgorde && typeof ps.volgorde === "object") ui.volgorde = ps.volgorde;
   } catch (e) {}
   function bewaar() {
-    try { localStorage.setItem(PK, JSON.stringify({ groepIdx: ui.groepIdx, toonNamen: ui.toonNamen, herhaal: ui.herhaal })); } catch (e) {}
+    try {
+      localStorage.setItem(PK, JSON.stringify({
+        groepIdx: ui.groepIdx, toonNamen: ui.toonNamen, herhaal: ui.herhaal,
+        toonBolletjes: ui.toonBolletjes, volgorde: ui.volgorde
+      }));
+    } catch (e) {}
   }
   function groepHuidig() { return groepen[ui.groepIdx]; }
 
@@ -96,17 +130,27 @@
     var items = itemsVan(groep);
     var emoji = GROEP_EMOJI[groep] || "📍";
 
-    // kaart met genummerde markeringen voor deze groep (alleen waar coords bestaan)
-    var markers = items.map(function (it) {
+    // kaart met genummerde markeringen voor deze groep (alleen waar coords bestaan,
+    // en alleen als de bolletjes-switch aan staat)
+    var markers = ui.toonBolletjes ? items.map(function (it) {
       var c = coordOf(it);
       if (!c) return "";
       return '<button class="pin" data-id="' + esc(it.id) + '" style="left:' + (c[0] * 100) +
         "%;top:" + (c[1] * 100) + '%" aria-label="' + esc(it.naam) + '">' + esc(labelOf(it)) + "</button>";
-    }).join("");
-    var geenCoords = items.length && markers.trim() === "";
+    }).join("") : "";
 
-    // namenlijst (tabel)
-    var rijen = items.map(function (it) {
+    // namenlijst (tabel). In sorteer-modus: namen altijd zichtbaar + ▲▼ om te ordenen.
+    var laatste = items.length - 1;
+    var rijen = items.map(function (it, i) {
+      if (ui.sorteerModus) {
+        return '<tr class="rij sort" data-id="' + esc(it.id) + '">' +
+          '<td class="num">' + esc(labelOf(it)) + "</td>" +
+          '<td class="naam"><span class="nm">' + esc(it.naam) + "</span></td>" +
+          '<td class="ord">' +
+            '<button class="arrow up" data-id="' + esc(it.id) + '"' + (i === 0 ? " disabled" : "") + ">▲</button>" +
+            '<button class="arrow down" data-id="' + esc(it.id) + '"' + (i === laatste ? " disabled" : "") + ">▼</button>" +
+          "</td></tr>";
+      }
       var zichtbaar = ui.toonNamen || ui.gespiekt[it.id];
       var cel = zichtbaar
         ? '<span class="nm">' + esc(it.naam) + "</span>"
@@ -135,11 +179,12 @@
 
           // links: kaart
           '<div class="col map">' +
+            '<div class="maptools">' +
+              '<button class="btn bol' + (ui.toonBolletjes ? " on" : "") + '">🔴 Bolletjes: ' + (ui.toonBolletjes ? "aan" : "uit") + "</button>" +
+            "</div>" +
             '<div class="bigmap"><img src="assets/kaart.jpg" alt="kaart van West-Nederland">' + markers + "</div>" +
-            (geenCoords
-              ? '<p class="note">De ' + esc(naam.toLowerCase()) +
-                " staan met " + (groep === "water" ? "Romeinse cijfers" : "letters") +
-                ' óp de kaart — zoek het teken dat bij de naam hoort.</p>'
+            (!ui.toonBolletjes
+              ? '<p class="note">Bolletjes uit — je ziet de kale kaart.</p>'
               : '<p class="note">Tik op een teken op de kaart om die naam even te zien.</p>') +
           "</div>" +
 
@@ -147,10 +192,17 @@
           '<div class="col list">' +
             '<div class="listhead">' +
               "<h2>" + emoji + " " + esc(naam) + " <span class=\"count\">(" + items.length + ")</span></h2>" +
-              '<div class="tools">' +
-                '<button class="btn toggle">' + (ui.toonNamen ? "🙈 Verberg namen" : "👀 Toon namen") + "</button>" +
-                '<button class="btn sing">🎵 Zing de namen</button>' +
-              "</div>" +
+              (ui.sorteerModus
+                ? '<div class="tools">' +
+                    '<button class="btn sortdone">✓ Klaar met ordenen</button>' +
+                    '<button class="btn ghost reset">↺ Herstel nummervolgorde</button>' +
+                  "</div>" +
+                  '<p class="note">Zet de namen met ▲▼ in jullie liedjes-volgorde. Dit wordt onthouden.</p>'
+                : '<div class="tools">' +
+                    '<button class="btn toggle">' + (ui.toonNamen ? "🙈 Verberg namen" : "👀 Toon namen") + "</button>" +
+                    '<button class="btn sing">🎵 Zing de namen</button>' +
+                    '<button class="btn order">✏️ Volgorde aanpassen</button>' +
+                  "</div>") +
             "</div>" +
             '<table class="tbl"><tbody>' + rijen + "</tbody></table>" +
           "</div>" +
@@ -188,31 +240,51 @@
       };
     }
 
-    app.querySelector(".toggle").onclick = function () {
-      ui.toonNamen = !ui.toonNamen;
-      ui.gespiekt = {}; bewaar(); render();
+    // bolletjes aan/uit
+    app.querySelector(".bol").onclick = function () {
+      ui.toonBolletjes = !ui.toonBolletjes; bewaar(); render();
     };
 
-    app.querySelector(".sing").onclick = function () {
-      if (zingtNu()) stopZingen(); else zingNamen(items);
-    };
+    var grp = groepHuidig();
 
-    // rij aantikken = die ene naam spieken (toggle)
-    var rijen = app.querySelectorAll(".rij");
-    for (var r = 0; r < rijen.length; r++) {
-      rijen[r].onclick = function () { spiek(this.getAttribute("data-id")); };
-    }
-
-    // nummer op de kaart aantikken = naam spieken + rij oplichten
-    var pins = app.querySelectorAll(".pin");
-    for (var p = 0; p < pins.length; p++) {
-      pins[p].onclick = function () {
-        var id = this.getAttribute("data-id");
-        spiek(id, true);
+    if (ui.sorteerModus) {
+      app.querySelector(".sortdone").onclick = function () { ui.sorteerModus = false; render(); };
+      app.querySelector(".reset").onclick = function () {
+        if (confirm("Terug naar de volgorde op nummer?")) herstelVolgorde(grp);
       };
+      var arrows = app.querySelectorAll(".arrow");
+      for (var a = 0; a < arrows.length; a++) {
+        arrows[a].onclick = function (e) {
+          e.stopPropagation();
+          verplaats(grp, this.getAttribute("data-id"), this.classList.contains("up") ? -1 : 1);
+        };
+      }
+    } else {
+      app.querySelector(".toggle").onclick = function () {
+        ui.toonNamen = !ui.toonNamen;
+        ui.gespiekt = {}; bewaar(); render();
+      };
+      app.querySelector(".sing").onclick = function () {
+        if (zingtNu()) stopZingen(); else zingNamen(items);
+      };
+      app.querySelector(".order").onclick = function () {
+        stopZingen(); ui.sorteerModus = true; ui.gespiekt = {}; render();
+      };
+
+      // rij aantikken = die ene naam spieken (toggle)
+      var rijen = app.querySelectorAll(".rij");
+      for (var r = 0; r < rijen.length; r++) {
+        rijen[r].onclick = function () { spiek(this.getAttribute("data-id")); };
+      }
+
+      // teken op de kaart aantikken = naam spieken + rij oplichten
+      var pins = app.querySelectorAll(".pin");
+      for (var p = 0; p < pins.length; p++) {
+        pins[p].onclick = function () { spiek(this.getAttribute("data-id"), true); };
+      }
     }
 
-    laadLiedje(groepHuidig());
+    laadLiedje(grp);
   }
 
   function spiek(id, flash) {
