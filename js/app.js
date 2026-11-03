@@ -8,6 +8,43 @@
   var QUESTIONS_PER_ROUND = 8;
   var MASTER_BOX = 4; // box >= 4 => "gekend"
 
+  // ---------------------------------------------------------------- Gebieden
+  // West-Nederland (js/data.js) en Noord-Nederland (js/data-noord.js) hebben elk een
+  // eigen leerroute, kaart en teller. Pinguïn, muntjes en winkel zijn gedeeld.
+  // Alles van het Noorden (items, winkel, plekken) heeft land: "noord"; de rest is West.
+  var NOORD = window.TOPO_NOORD || null;
+  var LANDS = {
+    west: {
+      id: "west", naam: "West-Nederland", emoji: "🌷", kaart: "assets/kaart.jpg",
+      items: DATA.items, key: "unlockedCount", gates: DATA.gates, regios: DATA.regios,
+      start: 5, mijlpalen: [5, 15, 30], tierKey: "shopTier", pre: ""
+    }
+  };
+  var LAND_IDS = ["west"];
+  var ALL_REGIOS = {}, COORDS = {};
+  Object.keys(DATA.regios).forEach(function (k) { ALL_REGIOS[k] = DATA.regios[k]; });
+  Object.keys(DATA.coords || {}).forEach(function (k) { COORDS[k] = DATA.coords[k]; });
+  if (NOORD) {
+    LANDS.noord = {
+      id: "noord", naam: NOORD.naam, emoji: NOORD.emoji, kaart: NOORD.kaart,
+      items: NOORD.items, key: "unlockedNoord", gates: NOORD.gates, regios: NOORD.regios,
+      start: NOORD.start, mijlpalen: NOORD.mijlpalen, tierKey: "shopTierNoord", pre: "Noord: "
+    };
+    LAND_IDS.push("noord");
+    Object.keys(NOORD.regios).forEach(function (k) { ALL_REGIOS[k] = NOORD.regios[k]; });
+    Object.keys(NOORD.coords).forEach(function (k) { COORDS[k] = NOORD.coords[k]; });
+    DATA.shop = DATA.shop.concat(NOORD.shop);
+    DATA.motivaties = DATA.motivaties.concat(NOORD.motivaties);
+    Object.keys(NOORD.scenes).forEach(function (k) { DATA.scenes[k] = NOORD.scenes[k]; });
+  }
+  function landOf(item) { return item.land || "west"; }
+  function itemsOf(id) { return LANDS[id].items; }
+  function allItems() {
+    var a = [];
+    LAND_IDS.forEach(function (id) { a = a.concat(LANDS[id].items); });
+    return a;
+  }
+
   // ---------------------------------------------------------------- State
   function todayStr() {
     var d = new Date();
@@ -32,7 +69,9 @@
       currentScene: "buiten",
       shopTier: 0,      // hoogste bereikte unlock-drempel (voor "nieuw in winkel")
       progress: {},     // id -> {box, goed, fout, dueAt, introduced}
-      unlockedCount: 5,
+      unlockedCount: 5,   // West
+      unlockedNoord: 5,   // Noord
+      regio: "west",      // laatst geoefende gebied
       streakDays: 0,
       lastPlayDay: null,
       badges: [],
@@ -41,11 +80,23 @@
       pos: {},          // deco-id -> {x,y} (%): zelf verplaatste plek
       muted: false      // geluid aan/uit
     };
-    for (var i = 0; i < s.unlockedCount && i < DATA.items.length; i++) {
-      var it = DATA.items[i];
-      s.progress[it.id] = { box: 1, goed: 0, fout: 0, dueAt: 0, introduced: true };
-    }
+    ensureLands(s);
     return s;
+  }
+
+  // Zorgt dat elk gebied een teller en startbegrippen heeft, ook in een oude opslag
+  // (van vóór Noord-Nederland): bestaande voortgang blijft onaangeroerd.
+  // West-starters zijn al 'geïntroduceerd'; die van het Noorden krijgen eerst een introkaartje.
+  function ensureLands(s) {
+    if (!s.regio || !LANDS[s.regio]) s.regio = "west";
+    LAND_IDS.forEach(function (id) {
+      var L = LANDS[id];
+      if (typeof s[L.key] !== "number") s[L.key] = L.start;
+      for (var i = 0; i < s[L.key] && i < L.items.length; i++) {
+        var it = L.items[i];
+        if (!s.progress[it.id]) s.progress[it.id] = { box: 1, goed: 0, fout: 0, dueAt: 0, introduced: id === "west" };
+      }
+    });
   }
 
   var state;
@@ -53,7 +104,7 @@
   function load() {
     try {
       var raw = localStorage.getItem(SAVE_KEY);
-      if (raw) { state = JSON.parse(raw); if (!state.pos) state.pos = {}; return; }
+      if (raw) { state = JSON.parse(raw); if (!state.pos) state.pos = {}; ensureLands(state); return; }
     } catch (e) {}
     state = defaultState();
   }
@@ -70,19 +121,25 @@
   }
   function hasLabel(item) { return labelOf(item).trim() !== ""; }
   function prog(id) { return state.progress[id]; }
-  function coordOf(item) { return (DATA.coords && DATA.coords[item.id]) || null; }
+  function coordOf(item) { return COORDS[item.id] || null; }
+  function land() { return LANDS[state.regio] || LANDS.west; }
   function mapHTML(item, showMarker) {
+    var L = LANDS[landOf(item)];
     var c = showMarker ? coordOf(item) : null;
     var marker = c ? '<div class="maphi" style="left:' + (c[0] * 100) + "%;top:" + (c[1] * 100) + '%"></div>' : "";
-    return '<div class="bigmap" id="qmap"><img src="assets/kaart.jpg" alt="kaart van West-Nederland">' + marker + "</div>";
+    return '<div class="bigmap ' + L.id + '" id="qmap"><img src="' + L.kaart + '" alt="kaart van ' + L.naam + '">' + marker + "</div>";
   }
   function isMastered(id) { var p = prog(id); return !!p && p.box >= MASTER_BOX; }
-  function masteredCount() {
-    return DATA.items.filter(function (it) { return isMastered(it.id); }).length;
+  // Aantal gekende begrippen: van één gebied, of (zonder argument) van alle gebieden samen.
+  function masteredCount(id) {
+    var list = id ? itemsOf(id) : allItems();
+    return list.filter(function (it) { return isMastered(it.id); }).length;
   }
+  function totaalIn(id) { return itemsOf(id).filter(hasLabel).length; }
   function owns(id) { return state.owned.indexOf(id) >= 0; }
   function shopItem(id) { return DATA.shop.filter(function (s) { return s.id === id; })[0]; }
-  function isLocked(item) { return (item.minMastered || 0) > masteredCount(); }
+  // Winkel-spullen uit het Noorden tellen alleen Noord-begrippen, de rest alleen West.
+  function isLocked(item) { return (item.minMastered || 0) > masteredCount(landOf(item)); }
   function sceneUnlocked(scene) {
     var cfg = DATA.scenes[scene];
     return !cfg || !cfg.upgrade || owns(cfg.upgrade);
@@ -91,15 +148,18 @@
     return Object.keys(DATA.scenes).filter(sceneUnlocked);
   }
   // Volgende drempel waarop er iets nieuws in de winkel komt
-  function nextGate() {
-    var m = masteredCount();
-    for (var i = 0; i < DATA.gates.length; i++) if (DATA.gates[i] > m) return DATA.gates[i];
+  function nextGate(id) {
+    var m = masteredCount(id), gates = LANDS[id].gates;
+    for (var i = 0; i < gates.length; i++) if (gates[i] > m) return gates[i];
     return null;
   }
 
+  // Begrippen van één gebied die al ontgrendeld zijn (op volgorde van de leerroute)
+  function unlockedItems(id) { return itemsOf(id).slice(0, state[LANDS[id].key]); }
+
   // Begrippen die meedoen in de quiz: ontgrendeld, geïntroduceerd en met een teken
-  function activeItems() {
-    return DATA.items.slice(0, state.unlockedCount).filter(function (it) {
+  function activeItems(id) {
+    return unlockedItems(id).filter(function (it) {
       var p = prog(it.id);
       return p && p.introduced && hasLabel(it);
     });
@@ -131,15 +191,15 @@
   function clamp(n) { return Math.max(10, Math.min(100, Math.round(n))); }
 
   // ---------------------------------------------------------------- Ontgrendelen
-  function maybeUnlock() {
-    var newlyUnlocked = [];
-    while (state.unlockedCount < DATA.items.length) {
-      var pool = DATA.items.slice(0, state.unlockedCount).filter(hasLabel);
+  function maybeUnlock(id) {
+    var L = LANDS[id], newlyUnlocked = [];
+    while (state[L.key] < L.items.length) {
+      var pool = unlockedItems(id).filter(hasLabel);
       var mastered = pool.filter(function (it) { return isMastered(it.id); }).length;
       // nieuw begrip zodra bijna de hele set gekend is (buffer 1)
       if (pool.length === 0 || mastered >= pool.length - 1) {
-        state.unlockedCount++;
-        var nw = DATA.items[state.unlockedCount - 1];
+        state[L.key]++;
+        var nw = L.items[state[L.key] - 1];
         if (!prog(nw.id)) {
           state.progress[nw.id] = { box: 1, goed: 0, fout: 0, dueAt: 0, introduced: false };
         }
@@ -168,7 +228,7 @@
   }
 
   function buildSession() {
-    var pool = activeItems();
+    var pool = activeItems(state.regio);
     if (!pool.length) return [];
     var now = Date.now();
     var due = pool.filter(function (it) { return prog(it.id).dueAt <= now; });
@@ -189,7 +249,8 @@
   }
 
   function distractors(item, field) {
-    var same = DATA.items.filter(function (it) {
+    var own = itemsOf(landOf(item));
+    var same = own.filter(function (it) {
       return it.id !== item.id && it.categorie === item.categorie && hasLabel(it);
     });
     var pool = shuffle(same);
@@ -201,7 +262,7 @@
     }
     // aanvullen met andere categorieën indien nodig
     if (out.length < 3) {
-      var any = shuffle(DATA.items.filter(function (it) { return it.id !== item.id && hasLabel(it); }));
+      var any = shuffle(own.filter(function (it) { return it.id !== item.id && hasLabel(it); }));
       for (var m = 0; m < any.length && out.length < 3; m++) {
         var v = field === "naam" ? any[m].naam : labelOf(any[m]);
         if (!seen[v]) { seen[v] = true; out.push(v); }
@@ -210,7 +271,7 @@
     return out;
   }
 
-  function catWoord(c) { return c === "stad" ? "plaats" : c === "water" ? "water" : "gebied"; }
+  function welk(c) { return c === "stad" ? "Welke plaats" : c === "water" ? "Welk water" : "Welk gebied"; }
 
   function makeQuestion(item) {
     var box = prog(item.id).box;
@@ -220,7 +281,7 @@
     if (mode === "tekenNaarNaam") {
       q = {
         item: item, mode: mode,
-        vraag: "Welke " + catWoord(item.categorie) + " is " + labelOf(item) + "?",
+        vraag: welk(item.categorie) + " is " + labelOf(item) + "?",
         antwoord: item.naam,
         opties: shuffle([item.naam].concat(distractors(item, "naam")))
       };
@@ -409,7 +470,8 @@
   function renderHome() {
     tickNeeds(); save();
     var st = stage();
-    var m = masteredCount(), totaal = DATA.items.filter(hasLabel).length;
+    var L = land();
+    var m = masteredCount(L.id), totaal = totaalIn(L.id);
     var greet = homeMsg ? homeMsg
       : state.needs.energie < 35 ? "Ik ben een beetje moe… zullen we even slapen? 😴"
       : state.needs.honger < 40 ? "Ik heb een beetje honger… zullen we muntjes verdienen? 🍪"
@@ -424,10 +486,11 @@
       '<div class="namebox"><input id="petname" placeholder="Naam voor je pinguïn" maxlength="14" value="' +
       esc(state.pet.naam) + '"><button class="btn mini" id="savename">Opslaan</button></div>';
 
-    var ng = nextGate();
+    var ng = nextGate(L.id);
+    var wie = LAND_IDS.length > 1 ? L.emoji + " " + L.naam + ": " : "";
     var unlockLine = ng != null
-      ? '<div class="progress-line">🎓 ' + m + " / " + totaal + " gekend · nog " + (ng - m) + " tot nieuwe winkelspullen 🛍️</div>"
-      : '<div class="progress-line">🎓 ' + m + " / " + totaal + " gekend · alles ontgrendeld! 🏆</div>";
+      ? '<div class="progress-line">🎓 ' + wie + m + " / " + totaal + " gekend · nog " + (ng - m) + " tot nieuwe winkelspullen 🛍️</div>"
+      : '<div class="progress-line">🎓 ' + wie + m + " / " + totaal + " gekend · alles ontgrendeld! 🏆</div>";
 
     h(topbar("Topo-huisdier") +
       '<div class="screen">' +
@@ -438,7 +501,7 @@
       '<div class="speech">' + greet + "</div>" + nameBlock + "</div>" +
       needsBars() +
       unlockLine +
-      '<button class="btn play" data-nav="oefenen">▶ Ga oefenen</button>' +
+      '<button class="btn play" data-nav="' + (LAND_IDS.length > 1 ? "oefenkeuze" : "oefenen") + '">▶ Ga oefenen</button>' +
       '<div class="row">' +
       '<button class="btn shop" data-nav="winkel">🛍️ Winkel</button>' +
       '<button class="btn album" data-nav="album">📒 Album</button>' +
@@ -466,7 +529,7 @@
       h('<div class="screen intro">' +
         '<div class="introcard">' +
         '<div class="newbadge">NIEUW!</div>' +
-        '<div class="bigmap"><img src="assets/kaart.jpg" alt="kaart"></div>' +
+        mapHTML(it, true) +
         '<h2>' + esc(it.naam) + '</h2>' +
         '<div class="teken">Teken op de kaart: <b>' + esc(labelOf(it)) + '</b></div>' +
         '<p class="weetje">' + it.weetje + "</p>" +
@@ -481,15 +544,37 @@
   // ---------------------------------------------------------------- Scherm: Oefenen
   var session = null, sIndex = 0, sCorrect = 0, sEarned = 0, sStreak = 0;
 
+  // Keuzescherm: West of Noord oefenen?
+  function renderOefenKeuze() {
+    tickNeeds(); save();
+    var cards = LAND_IDS.map(function (id) {
+      var L = LANDS[id], m = masteredCount(id), tot = totaalIn(id);
+      var pct = tot ? Math.round(m / tot * 100) : 0;
+      return '<button class="landcard" data-land="' + id + '">' +
+        '<span class="thumb"><img src="' + L.kaart + '" alt=""></span>' +
+        '<span class="lc-naam">' + L.emoji + " " + esc(L.naam) + "</span>" +
+        '<span class="lc-bar"><span style="width:' + pct + '%"></span></span>' +
+        '<span class="lc-info">' + m + " / " + tot + " gekend</span></button>";
+    }).join("");
+    h(topbar("Wat wil je oefenen?") +
+      '<div class="screen"><div class="landlist">' + cards + "</div>" +
+      '<button class="btn ghost" data-nav="home">← Terug</button></div>');
+    appEl.querySelectorAll("[data-land]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.regio = b.getAttribute("data-land"); save(); AudioFX.play("pop"); startOefenen();
+      });
+    });
+  }
+
   function startOefenen() {
-    var newly = maybeUnlock();
-    // zorg dat zichtbare begrippen ook echt 'introduced' zijn
-    DATA.items.slice(0, state.unlockedCount).forEach(function (it) {
+    maybeUnlock(state.regio);
+    // alles wat ontgrendeld is maar nog geen introkaartje kreeg, krijgt dat nu
+    var nieuw = unlockedItems(state.regio).filter(function (it) {
       var p = prog(it.id);
-      if (p && !p.introduced && hasLabel(it)) { /* via intro */ }
+      return p && !p.introduced && hasLabel(it);
     });
     save();
-    if (newly.length) { showIntros(newly, beginRound); }
+    if (nieuw.length) { showIntros(nieuw, beginRound); }
     else beginRound();
   }
 
@@ -589,7 +674,8 @@
       (newBadges.length ? '<div class="newbadges">Nieuwe beloning: ' + newBadges.map(esc).join(", ") + " 🏅</div>" : "") +
       (newUnlocks.length ? '<div class="newbadges unlock">' + newUnlocks.map(esc).join("<br>") + "</div>" : "") +
       '<button class="btn shop" data-nav="winkel">🛍️ Muntjes uitgeven</button>' +
-      '<button class="btn play" data-nav="oefenen">▶ Nog een rondje</button>' +
+      '<button class="btn play" data-nav="oefenen">▶ Nog een rondje (' + esc(land().naam) + ")</button>" +
+      (LAND_IDS.length > 1 ? '<button class="btn album" data-nav="oefenkeuze">🗺️ Ander gebied oefenen</button>' : "") +
       '<button class="btn ghost" data-nav="home">🏠 Naar huis</button>' +
       "</div>");
     confetti();
@@ -597,35 +683,48 @@
     else AudioFX.play("feest");
   }
 
+  function mijlNaam(n, totaal) { return n === 5 ? "Eerste 5!" : n >= totaal ? "Alles gekend!" : n + " gekend!"; }
+
   function checkUnlocksAndBadges() {
     state._justBadges = [];
+    state._justUnlocks = [];
     // stickers voor nieuw gekende begrippen
-    DATA.items.forEach(function (it) {
+    allItems().forEach(function (it) {
       if (isMastered(it.id) && state.stickers.indexOf(it.id) < 0) state.stickers.push(it.id);
     });
-    // mijlpaal-badges
-    var m = masteredCount();
-    [[5, "Eerste 5!"], [15, "15 gekend!"], [30, "30 gekend!"], [DATA.items.filter(hasLabel).length, "Alles gekend!"]]
-      .forEach(function (mb) {
-        var id = "mijlpaal-" + mb[0];
-        if (m >= mb[0] && state.badges.indexOf(id) < 0) { state.badges.push(id); state._justBadges.push(mb[1]); }
+    LAND_IDS.forEach(function (id) {
+      var L = LANDS[id], m = masteredCount(id), totaal = totaalIn(id);
+      // mijlpaal-badges (West houdt zijn oude ids: "mijlpaal-5"; Noord: "noord-mijlpaal-5")
+      var seen = {};
+      L.mijlpalen.concat([totaal]).forEach(function (n) {
+        if (seen[n]) return; seen[n] = true;
+        var bid = (id === "west" ? "" : id + "-") + "mijlpaal-" + n;
+        if (m >= n && state.badges.indexOf(bid) < 0) { state.badges.push(bid); state._justBadges.push(L.pre + mijlNaam(n, totaal)); }
       });
-    // regio-badges
-    Object.keys(DATA.regios).forEach(function (r) {
-      var inReg = DATA.items.filter(function (it) { return it.regio === r && hasLabel(it); });
-      if (inReg.length && inReg.every(function (it) { return isMastered(it.id); })) {
-        var id = "regio-" + r;
-        if (state.badges.indexOf(id) < 0) { state.badges.push(id); state._justBadges.push(DATA.regios[r] + " compleet!"); }
-      }
+      // regio-badges
+      Object.keys(L.regios).forEach(function (r) {
+        var inReg = L.items.filter(function (it) { return it.regio === r && hasLabel(it); });
+        if (inReg.length && inReg.every(function (it) { return isMastered(it.id); })) {
+          var bid = "regio-" + r;
+          if (state.badges.indexOf(bid) < 0) { state.badges.push(bid); state._justBadges.push(L.regios[r] + " compleet!"); }
+        }
+      });
+      // winkel-unlocks bij een nieuwe drempel
+      (L.gates || []).forEach(function (g) {
+        if (g > 0 && m >= g && (state[L.tierKey] || 0) < g) {
+          state[L.tierKey] = g;
+          var nw = DATA.shop.filter(function (s) { return (s.minMastered || 0) === g && landOf(s) === id; });
+          var emojis = nw.slice(0, 5).map(function (s) { return s.emoji; }).join(" ");
+          state._justUnlocks.push("Nieuw in de winkel (bij " + g + " gekend" + (id === "west" ? "" : " in het Noorden") + ")! " + emojis);
+        }
+      });
     });
-    // winkel-unlocks bij een nieuwe drempel (5/10/20/30 gekend)
-    state._justUnlocks = [];
-    DATA.gates.forEach(function (g) {
-      if (g > 0 && m >= g && (state.shopTier || 0) < g) {
-        state.shopTier = g;
-        var nw = DATA.shop.filter(function (s) { return (s.minMastered || 0) === g; });
-        var emojis = nw.slice(0, 5).map(function (s) { return s.emoji; }).join(" ");
-        state._justUnlocks.push("Nieuw in de winkel (bij " + g + " gekend)! " + emojis);
+    // nieuwe plekken (bijv. Elfstedentocht) gaan open als de bijbehorende groep compleet is
+    Object.keys(DATA.scenes).forEach(function (sc) {
+      var cfg = DATA.scenes[sc];
+      if (cfg.unlockBy && cfg.upgrade && state.badges.indexOf(cfg.unlockBy) >= 0 && !owns(cfg.upgrade)) {
+        state.owned.push(cfg.upgrade);
+        state._justUnlocks.push("🎉 Nieuwe plek ontgrendeld: " + cfg.emoji + " " + cfg.naam + "! Kijk bij je huis en in de winkel.");
       }
     });
   }
@@ -639,7 +738,7 @@
       var worn = it.type === "kleren" && state.equipped === it.id;
       var btn;
       if (locked) {
-        btn = '<div class="lockmsg">🔒 vanaf ' + it.minMastered + " gekend</div>";
+        btn = '<div class="lockmsg">🔒 vanaf ' + it.minMastered + " gekend" + (landOf(it) === "west" ? "" : " in het Noorden") + "</div>";
       } else if (owned) {
         btn = it.type === "kleren"
           ? '<button class="buy ' + (worn ? "on" : "") + '" data-wear="' + it.id + '">' + (worn ? "Draagt ✓" : "Draag") + "</button>"
@@ -654,8 +753,23 @@
         '</div><div class="price">' + it.prijs + " 💰</div>" + btn + "</div>";
     }
     function grid(list) { return '<div class="shopgrid">' + list.map(card).join("") + "</div>"; }
-    function byType(t) { return DATA.shop.filter(function (s) { return s.type === t; }); }
+    function byType(t, lnd) { return DATA.shop.filter(function (s) { return s.type === t && landOf(s) === (lnd || "west"); }); }
     function decoScene(sc) { return DATA.shop.filter(function (s) { return s.type === "deco" && (s.scene || "huis") === sc; }); }
+
+    // Alles wat bij het Noorden hoort: eten, kleren en de plekken die je daar vrijspeelt.
+    var noordSectie = "";
+    if (LANDS.noord) {
+      noordSectie = "<h3>🐄 Alleen in het Noorden</h3>" +
+        '<p class="info">Leer plekken in Noord-Nederland om dit vrij te spelen!</p>' +
+        "<h3>🍽️ Noorderlijk eten</h3>" + grid(byType("eten", "noord")) +
+        "<h3>👕 Noorderlijke kleren</h3>" + grid(byType("kleren", "noord"));
+      Object.keys(DATA.scenes).forEach(function (sc) {
+        var cfg = DATA.scenes[sc];
+        if (!cfg.unlockBy) return;
+        noordSectie += "<h3>" + cfg.emoji + " " + esc(cfg.naam) + "</h3>" +
+          (sceneUnlocked(sc) ? grid(decoScene(sc)) : '<p class="info">🔒 ' + esc(cfg.hint) + "</p>");
+      });
+    }
 
     var tuinSectie = owns("tuin")
       ? "<h3>🌳 Voor in de tuin</h3>" + grid(decoScene("tuin"))
@@ -674,6 +788,7 @@
       "<h3>⭐ Upgrades</h3>" + grid(byType("upgrade")) +
       tuinSectie +
       bovenSectie +
+      noordSectie +
       '<div class="feedback" id="shopfb"></div>' +
       "</div>");
 
@@ -724,42 +839,66 @@
   function renderAlbum() {
     var cats = { stad: "🏙️ Steden", water: "🌊 Wateren", gebied: "🟩 Gebieden" };
     var body = "";
-    Object.keys(cats).forEach(function (c) {
-      var items = DATA.items.filter(function (it) { return it.categorie === c && hasLabel(it); });
-      body += "<h3>" + cats[c] + "</h3><div class=\"album\">" + items.map(function (it) {
-        var got = state.stickers.indexOf(it.id) >= 0;
-        return '<div class="sticker ' + (got ? "got" : "") + '">' +
-          '<div class="s-teken">' + esc(labelOf(it)) + "</div>" +
-          '<div class="s-naam">' + (got ? esc(it.naam) : "???") + "</div></div>";
-      }).join("") + "</div>";
+    LAND_IDS.forEach(function (id) {
+      var L = LANDS[id];
+      if (LAND_IDS.length > 1) body += '<h2 class="landkop">' + L.emoji + " " + esc(L.naam) + "</h2>";
+      Object.keys(cats).forEach(function (c) {
+        var items = L.items.filter(function (it) { return it.categorie === c && hasLabel(it); });
+        body += "<h3>" + cats[c] + "</h3><div class=\"album\">" + items.map(function (it) {
+          var got = state.stickers.indexOf(it.id) >= 0;
+          return '<div class="sticker ' + (got ? "got" : "") + '">' +
+            '<div class="s-teken">' + esc(labelOf(it)) + "</div>" +
+            '<div class="s-naam">' + (got ? esc(it.naam) : "???") + "</div></div>";
+        }).join("") + "</div>";
+      });
     });
     var badges = state.badges.length
       ? state.badges.map(function (b) { return '<span class="badge">🏅 ' + esc(badgeNaam(b)) + "</span>"; }).join("")
       : '<p class="info">Nog geen beloningen — oefen een hele regio om er een te verdienen!</p>';
+
+    // Paspoort van het Noorden: een stempel per afgeronde groep
+    var paspoort = "";
+    if (NOORD) {
+      var gestempeld = NOORD.paspoort.filter(function (p) { return state.badges.indexOf(p.badge) >= 0; }).length;
+      paspoort = "<h3>🛂 Paspoort Noord-Nederland (" + gestempeld + " / " + NOORD.paspoort.length + ")</h3>" +
+        '<div class="paspoort">' + NOORD.paspoort.map(function (p) {
+          var got = state.badges.indexOf(p.badge) >= 0;
+          return '<div class="stempel ' + (got ? "got" : "") + '"><div class="st-emoji">' + (got ? p.emoji : "❔") +
+            '</div><div class="st-naam">' + esc(p.naam) + "</div></div>";
+        }).join("") + "</div>";
+    }
     h(topbar("Album") +
       '<div class="screen">' +
       "<h3>🏅 Beloningen</h3><div class=\"badges\">" + badges + "</div>" +
+      paspoort +
       body + "</div>");
   }
   function badgeNaam(id) {
-    if (id.indexOf("regio-") === 0) return (DATA.regios[id.slice(6)] || id) + " compleet";
-    if (id === "mijlpaal-5") return "Eerste 5";
-    if (id === "mijlpaal-15") return "15 gekend";
-    if (id === "mijlpaal-30") return "30 gekend";
-    return "Alles gekend";
+    if (id.indexOf("regio-") === 0) return (ALL_REGIOS[id.slice(6)] || id) + " compleet";
+    var m = /^(noord-)?mijlpaal-(\d+)$/.exec(id);
+    if (m) {
+      var lid = m[1] ? "noord" : "west", n = +m[2];
+      var pre = lid === "noord" ? "Noord: " : "";
+      return pre + (n === 5 ? "Eerste 5" : (!LANDS[lid] || n >= totaalIn(lid)) ? "Alles gekend" : n + " gekend");
+    }
+    return id;
   }
 
   // ---------------------------------------------------------------- Scherm: Voor ouders
   function renderOuders() {
-    var m = masteredCount(), totaal = DATA.items.filter(hasLabel).length;
+    var m = masteredCount(), totaal = allItems().filter(hasLabel).length;
     function statusWoord(it) {
       var p = prog(it.id);
       if (!p || !p.introduced) return '<span class="st nieuw">nog niet</span>';
       if (isMastered(it.id)) return '<span class="st gekend">gekend</span>';
       return '<span class="st lerend">lerend</span>';
     }
-    var rows = DATA.items.filter(hasLabel).map(function (it) {
-      return "<tr><td>" + esc(it.naam) + '</td><td class="c">' + esc(labelOf(it)) + "</td><td>" + statusWoord(it) + "</td></tr>";
+    var rows = LAND_IDS.map(function (id) {
+      var L = LANDS[id];
+      return (LAND_IDS.length > 1 ? '<tr><th colspan="3" class="landrij">' + L.emoji + " " + esc(L.naam) + " (" + masteredCount(id) + " / " + totaalIn(id) + ")</th></tr>" : "") +
+        L.items.filter(hasLabel).map(function (it) {
+          return "<tr><td>" + esc(it.naam) + '</td><td class="c">' + esc(labelOf(it)) + "</td><td>" + statusWoord(it) + "</td></tr>";
+        }).join("");
     }).join("");
     h(topbar("Voor ouders") +
       '<div class="screen ouders">' +
@@ -797,19 +936,24 @@
 
   // ---------------------------------------------------------------- Scherm: Kaart instellen
   function renderKaart() {
-    var rows = DATA.items.map(function (it) {
-      var cur = labelOf(it);
-      return '<tr><td>' + esc(it.naam) + ' <small>(' + it.categorie + ')</small></td>' +
-        '<td><input class="lbl" data-id="' + it.id + '" value="' + esc(cur) + '" size="4"></td></tr>';
+    var secties = LAND_IDS.map(function (id) {
+      var L = LANDS[id];
+      var rows = L.items.map(function (it) {
+        var cur = labelOf(it);
+        return '<tr><td>' + esc(it.naam) + ' <small>(' + it.categorie + ')</small></td>' +
+          '<td><input class="lbl" data-id="' + it.id + '" value="' + esc(cur) + '" size="4"></td></tr>';
+      }).join("");
+      return '<h3>' + L.emoji + " " + esc(L.naam) + "</h3>" +
+        '<div class="bigmap ' + id + '"><img src="' + L.kaart + '" alt="kaart van ' + esc(L.naam) + '"></div>' +
+        '<table class="voortgang"><thead><tr><th>Begrip</th><th>Teken</th></tr></thead><tbody>' +
+        rows + "</tbody></table>";
     }).join("");
     h(topbar("Kaart instellen") +
       '<div class="screen ouders">' +
-      '<p class="info">Vergelijk met de kaart en corrigeer waar nodig. De tekens komen van het ' +
+      '<p class="info">Vergelijk met de kaart en corrigeer waar nodig. West: de tekens komen van het ' +
       "nagekeken werkblad; <b>Utrecht (3)</b> en <b>Noordwijk (11)</b> zijn de twee om even extra te checken. " +
-      "Zaanstad stond doorgestreept (leeg = doet niet mee).</p>" +
-      '<div class="bigmap"><img src="assets/kaart.jpg" alt="kaart"></div>' +
-      '<table class="voortgang"><thead><tr><th>Begrip</th><th>Teken</th></tr></thead><tbody>' +
-      rows + "</tbody></table>" +
+      "Zaanstad stond doorgestreept (leeg = doet niet mee). Noord: gecontroleerd tegen de kaart zelf.</p>" +
+      secties +
       '<button class="btn play" id="kaartklaar">✓ Opslaan en terug</button>' +
       "</div>");
     appEl.querySelectorAll(".lbl").forEach(function (inp) {
@@ -900,7 +1044,7 @@
   // ---------------------------------------------------------------- Router
   var ROUTES = {
     home: renderHome, oefenen: startOefenen, winkel: renderWinkel,
-    album: renderAlbum, ouders: renderOuders, kaart: renderKaart
+    album: renderAlbum, ouders: renderOuders, kaart: renderKaart, oefenkeuze: renderOefenKeuze
   };
   var currentRoute = "home";
   function nav(route) { editMode = false; currentRoute = ROUTES[route] ? route : "home"; (ROUTES[currentRoute])(); window.scrollTo(0, 0); }
@@ -923,9 +1067,12 @@
     if (/[?&]demo/.test(location.search)) {
       demoMode = true;
       state.coins = 9999; state.unlockedCount = DATA.items.length;
+      if (NOORD) state.unlockedNoord = NOORD.items.length;
       DATA.items.slice(0, 26).forEach(function (it) { state.progress[it.id] = { box: 5, goed: 9, fout: 0, dueAt: 0, introduced: true }; });
+      if (NOORD) NOORD.items.forEach(function (it) { state.progress[it.id] = { box: 5, goed: 9, fout: 0, dueAt: 0, introduced: true }; });
       state.owned = DATA.shop.filter(function (s) { return s.type !== "eten"; }).map(function (s) { return s.id; });
-      state.shopTier = 30;
+      Object.keys(DATA.scenes).forEach(function (sc) { if (DATA.scenes[sc].upgrade && !owns(DATA.scenes[sc].upgrade)) state.owned.push(DATA.scenes[sc].upgrade); });
+      state.shopTier = 30; state.shopTierNoord = 30;
     }
     document.body.addEventListener("click", function (e) {
       AudioFX.ensure(); // audio ontgrendelen bij eerste klik
@@ -973,8 +1120,8 @@
       o.addEventListener("pointerup", up);
       o.addEventListener("pointercancel", up);
     });
-    var scm = /[?&]scene=(buiten|huis|tuin|boven)/.exec(location.search);
-    if (scm && sceneUnlocked(scm[1])) state.currentScene = scm[1];
+    var scm = /[?&]scene=([a-z]+)/.exec(location.search);
+    if (scm && DATA.scenes[scm[1]] && sceneUnlocked(scm[1])) state.currentScene = scm[1];
     // deep-link voor testen/bladwijzers: ?screen=oefenen|winkel|album|ouders
     var m = /[?&]screen=([a-z]+)/.exec(location.search);
     if (m && ROUTES[m[1]]) nav(m[1]); else renderHome();

@@ -2,15 +2,17 @@
  * Een nieuwe versie WACHT (geen auto-skipWaiting), zodat de app een
  * "nieuwe versie beschikbaar"-balkje kan tonen; pas bij een tik erop
  * activeert de nieuwe versie (SKIP_WAITING-bericht hieronder). */
-var CACHE = "topo-huisdier-v11";
+var CACHE = "topo-huisdier-v12";
 var ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/data.js",
+  "./js/data-noord.js",
   "./js/app.js",
   "./manifest.webmanifest",
   "./assets/kaart.jpg",
+  "./assets/kaart-noord.jpg",
   "./assets/icon-192.png",
   "./assets/icon-512.png"
 ];

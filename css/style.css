@@ -80,6 +80,25 @@ body {
   100% { box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 0 0 rgba(255,46,46,0); }
 }
 
+/* De Noord-kaart is breder en heeft kleinere tekens: kleinere markering */
+.bigmap.noord .maphi { width: 6.5%; border-width: 3px; }
+
+/* Keuze: West of Noord oefenen */
+.landlist { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.landcard {
+  font: inherit; cursor: pointer; text-align: center; color: #2a2340;
+  display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  background: #faf5ff; border: 3px solid #e7d6f5; border-radius: 18px;
+  box-shadow: 0 5px 0 rgba(0,0,0,.08);
+}
+.landcard:active { transform: translateY(2px); box-shadow: 0 3px 0 rgba(0,0,0,.08); }
+.landcard .thumb { display: block; height: 150px; overflow: hidden; border-radius: 12px; background: #dfeefc; }
+.landcard .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lc-naam { font-size: 20px; font-weight: bold; color: #9a3ab0; }
+.lc-bar { display: block; height: 12px; background: #eee; border-radius: 8px; overflow: hidden; }
+.lc-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #46b358, #2e9e7a); border-radius: 8px; }
+.lc-info { font-size: 14px; color: #6b5b85; font-weight: bold; }
+
 /* Quiz */
 .question { font-weight: bold; font-size: 20px; color: #9a3ab0; text-align: center; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -114,6 +133,16 @@ h3 { margin: 6px 0 2px; color: #9a3ab0; }
 .sticker.got { border-style: solid; border-color: #46b358; background: #eafaee; opacity: 1; }
 .s-teken { font-weight: bold; font-size: 20px; color: #9a3ab0; }
 .s-naam { font-size: 12px; }
+.landkop { margin: 14px 0 0; color: #5a8ee0; border-top: 3px solid #e7d6f5; padding-top: 10px; }
+table.voortgang th.landrij { background: #f3ecfb; color: #9a3ab0; text-align: left; }
+
+/* Paspoort van het Noorden */
+.paspoort { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.stempel { border: 2px dashed #ccc; border-radius: 50%; aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f7f7f7; opacity: .7; }
+.stempel.got { border: 3px solid #c0392b; background: #fff5f3; opacity: 1; transform: rotate(-6deg); }
+.stempel .st-emoji { font-size: 30px; }
+.stempel .st-naam { font-size: 11px; font-weight: bold; color: #6b5b85; }
+.stempel.got .st-naam { color: #c0392b; }
 .badges { display: flex; flex-wrap: wrap; gap: 8px; }
 .badge { background: #fff6da; border: 1px solid #ffcb47; border-radius: 20px; padding: 4px 10px; font-size: 13px; }
 .newbadges { text-align: center; color: #b06ad6; font-weight: bold; }
@@ -143,6 +172,11 @@ small { color: #999; font-size: 11px; }
 .scene.huis  { background: linear-gradient(#f0e2d1 0%, #f0e2d1 62%, #c99c6d 62%, #b6895a 100%); }
 .scene.tuin  { background: linear-gradient(#bfe8ff 0%, #bfe8ff 52%, #8fd36b 52%, #67ba49 100%); }
 .scene.boven { background: linear-gradient(#2b2b55 0%, #3a3a6b 58%, #7c6b52 58%, #6a5a46 100%); }
+/* Plekken uit het Noorden */
+.scene.elfsteden { background: linear-gradient(#cfe9ff 0%, #eaf7ff 55%, #bfe3f7 55%, #9fd3ee 100%); }
+.scene.zeehonden { background: linear-gradient(#bfe8ff 0%, #d9f1ff 42%, #f2dfa8 42%, #ecd08f 70%, #5fb8de 70%, #3f9fcc 100%); }
+.scene.heide     { background: linear-gradient(#d5e8ff 0%, #f4efd6 48%, #a77dbb 48%, #7d5a9a 100%); }
+.scene.wadden    { background: linear-gradient(#aee0ff 0%, #d9f1ff 38%, #7fcbec 38%, #7fcbec 46%, #f5e3a8 46%, #e9cf86 100%); }
 .scene .pet-wrap { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); }
 .scene .pet-svg { width: 170px; height: 150px; }
 .deco-obj { position: absolute; transform: translate(-50%, -50%); line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
@@ -187,6 +221,7 @@ small { color: #999; font-size: 11px; }
 
   /* niet-quiz schermen: inhoud gecentreerd, niet uitgerekt */
   .screen:not(.quiz) { max-width: 600px; margin: 0 auto; width: 100%; }
+  .landlist { grid-template-columns: 1fr 1fr; }
   .intro .introcard { max-width: 640px; margin: 0 auto; }
 
   /* Oefenen in twee kolommen: kaart links, vraag + antwoorden rechts */

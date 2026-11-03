@@ -21,7 +21,28 @@ technische plan in [`../voorstellen/topo-huisdier/`](../voorstellen/topo-huisdie
   stickeralbum, badges, dagelijkse reeks en confetti.
 - Alles lokaal op het apparaat: geen account, geen internet, geen reclame.
 
-## De leer-data
+## West- én Noord-Nederland
+
+Bij **Ga oefenen** kies je eerst welk deel je oefent. Elk deel heeft een eigen
+kaart, leerroute en teller; pinguïn, muntjes en winkel zijn gedeeld.
+
+Het Noorden (data in [`js/data-noord.js`](js/data-noord.js), kaart
+`assets/kaart-noord.jpg`) heeft eigen beloningen:
+
+- **Nieuwe plekken** voor de pinguïn, vrij te spelen door alle begrippen van één
+  groep te kennen: ⛸️ Elfstedentocht (Friesland), 🦭 Zeehondencrèche (Groningen),
+  🪨 Drentse heide (Drenthe) en 🏝️ Waddenstrand (eilanden & gebieden). Daarna koop
+  je er spullen voor in de winkel.
+- **Noorderlijk eten en kleren** (sûkerbôle, schaatshelm, zeehondje op je hoofd, …),
+  die opengaan naarmate je meer van het Noorden kent.
+- Een **paspoort** in het album met een stempel per afgeronde groep.
+- Bij elk nieuw begrip een introkaartje met de plek gemarkeerd en een weetje.
+
+Een nieuw deel van Nederland toevoegen: kaart in `assets/`, een data-bestand naar
+het voorbeeld van `data-noord.js`, een `<script>` in `index.html`, een regel in
+`LANDS` bovenin `js/app.js`, en de bestanden in `sw.js`.
+
+## De leer-data (West)
 
 De koppeling naam ↔ teken komt uit het **nagekeken** werkblad `Kaart_0002.jpg`
 en staat in [`js/data.js`](js/data.js). De sleutel is intern volledig consistent
